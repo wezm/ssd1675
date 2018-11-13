@@ -19,6 +19,7 @@ The library has been tested and confirmed working on these devices:
 
 ## Credits
 
+* [Waveshare EPD driver](https://github.com/caemor/epd-waveshare)
 * [SSD1306 OLED display driver](https://github.com/jamwaffles/ssd1306)
 * [SSD1322 OLED display driver](https://github.com/edarc/ssd1322)
 * [Pimoroni Python library for the Inky pHAT and Inky wHAT e-paper displays](https://github.com/pimoroni/inky)

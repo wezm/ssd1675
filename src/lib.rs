@@ -1,3 +1,7 @@
+extern crate embedded_hal as hal;
+
+mod interface;
+
 #[cfg(test)]
 mod tests {
     #[test]

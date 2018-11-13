@@ -4,3 +4,15 @@ version = "0.1.0"
 authors = ["Wesley Moore <wes@wezm.net>"]
 
 [dependencies]
+
+[dependencies.embedded-hal]
+features = ["unproven"]
+version = "0.2.2"
+
+[dependencies.embedded-graphics]
+optional = true
+version = "0.4.4"
+
+[features]
+default = ["graphics"]
+graphics = ["embedded-graphics"]
