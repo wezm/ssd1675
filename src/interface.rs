@@ -3,7 +3,7 @@ use hal;
 // Section 15.2 of the HINK-E0213A07 data sheet says to hold for 10ms
 const RESET_DELAY_MS: u8 = 10;
 
-struct DisplayInterface<SPI, CS, BUSY, DC, RESET> {
+pub struct DisplayInterface<SPI, CS, BUSY, DC, RESET> {
     /// SPI
     spi: SPI,
     /// CS for SPI
