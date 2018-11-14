@@ -1,6 +1,6 @@
 use hal;
 
-use command::{BufCommand, Command, DataEntryMode, IncrementAxis};
+use command::{BufCommand, Command, DataEntryMode, DeepSleepMode, IncrementAxis};
 use interface::DisplayInterface;
 
 // Max display resolution is 160x296
@@ -90,7 +90,6 @@ impl<I> Display<I> where I: DisplayInterface {
     }
 
     fn deep_sleep(&mut self) -> Result<(), I::Error> {
-        // TODO: Send DeepSleep command
-        unimplemented!()
+        Command::DeepSleepMode(DeepSleepMode::PreserveRAM).execute(&mut self.interface)
     }
 }

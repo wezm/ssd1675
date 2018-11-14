@@ -45,9 +45,9 @@ pub enum DeepSleepMode {
     /// Not sleeping
     Normal,
     /// Deep sleep with RAM preserved
-    Mode1,
+    PreserveRAM,
     /// Deep sleep RAM not preserved
-    Mode2,
+    DiscardRAM,
 }
 
 pub enum Command {
@@ -233,8 +233,8 @@ impl Command {
             DeepSleepMode(mode) => {
                 let mode = match mode {
                     self::DeepSleepMode::Normal => 0b00,
-                    self::DeepSleepMode::Mode1 => 0b01,
-                    self::DeepSleepMode::Mode2 => 0b11,
+                    self::DeepSleepMode::PreserveRAM => 0b01,
+                    self::DeepSleepMode::DiscardRAM => 0b11,
                 };
 
                 pack!(buf, 0x10, [mode])
