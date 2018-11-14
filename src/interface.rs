@@ -47,7 +47,7 @@ where
 
     fn write(&mut self, data: &[u8]) -> Result<(), SPI::Error> {
         // Select the controller with chip select (CS)
-        self.cs.set_low();
+        // self.cs.set_low();
 
         // Linux has a default limit of 4096 bytes per SPI transfer
         // https://github.com/torvalds/linux/blob/ccda4af0f4b92f7b4c308d3acc262f4a7e3affad/drivers/spi/spidev.c#L93
@@ -60,7 +60,7 @@ where
         }
 
         // Release the controller
-        self.cs.set_high();
+        // self.cs.set_high();
 
         Ok(())
     }

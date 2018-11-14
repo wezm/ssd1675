@@ -269,8 +269,9 @@ impl Command {
             }
             // UpdateDisplayOption1(RamOption, RamOption) => {
             // }
-            // UpdateDisplayOption2(u8) => {
-            // }
+            UpdateDisplayOption2(value) => {
+                pack!(buf, 0x22, [value])
+            }
             // EnterVCOMSensing => {
             // }
             // VCOMSenseDuration(u8) => {
@@ -300,17 +301,19 @@ impl Command {
             // }
             // AutoWriteBlackPattern(u8) => {
             // }
-            // XAddress(u8) => {
-            // }
-            // YAddress(u8) => {
-            // }
+            XAddress(address) => {
+                pack!(buf, 0x4E, [address])
+            }
+            YAddress(address) => {
+                pack!(buf, 0x4F, [address])
+            }
             AnalogBlockControl(value) => {
                 pack!(buf, 0x74, [value])
             }
             DigitalBlockControl(value) => {
                 pack!(buf, 0x7E, [value])
             }
-            _ => unimplemented!(),
+            _ => unimplemented!()
         };
 
         interface.send_command(command)?;
@@ -328,11 +331,9 @@ impl<'buf> BufCommand<'buf> {
 
         let (command, data) = match self {
             WriteBlackData(buffer) => {
-                // TODO: Handle rotation
                 (0x24, buffer)
             }
             WriteRedData(buffer) => {
-                // TODO: Handle rotation
                 (0x26, buffer)
             }
             WriteLUT(buffer) => {

@@ -1,3 +1,4 @@
+use hal;
 use color::Color;
 use display::{Display, Rotation};
 use interface::DisplayInterface;
@@ -14,8 +15,20 @@ impl<'a, I> GraphicDisplay<'a, I> where I: DisplayInterface {
         GraphicDisplay { display, black_buffer, red_buffer }
     }
 
-    pub fn update(&mut self) -> Result<(), ()> {
-        unimplemented!()
+    pub fn update<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D) -> Result<(), I::Error> {
+        self.display.update(self.black_buffer, self.red_buffer, delay)
+    }
+
+    pub fn clear(&mut self, _color: Color) {
+        // TODO: Support color
+        for byte in &mut self.black_buffer.iter_mut() {
+            *byte = 1; // background_color.get_byte_value();
+        }
+
+        // TODO: Combine loops
+        for byte in &mut self.red_buffer.iter_mut() {
+            *byte = 0; // background_color.get_byte_value();
+        }
     }
 
     fn set_pixel(&mut self, x: u32, y: u32, color: Color) {
