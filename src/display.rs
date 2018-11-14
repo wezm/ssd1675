@@ -13,28 +13,43 @@ const DIGITAL_BLOCK_CONTROL_MAGIC: u8 = 0x3B;
 
 struct Config {}
 
-struct Dimensions {
-    rows: u16,
-    cols: u8,
+pub struct Dimensions {
+    pub rows: u16,
+    pub cols: u8,
+}
+
+#[derive(Clone, Copy)]
+pub enum Rotation {
+    Rotate0,
+    Rotate90,
+    Rotate180,
+    Rotate270,
+}
+
+impl Default for Rotation {
+    fn default() -> Self {
+        Rotation::Rotate0
+    }
 }
 
 pub struct Display<I> where I: DisplayInterface {
     interface: I,
     dimensions: Dimensions,
-    rotation: u8,
+    rotation: Rotation,
 }
 
 impl<I> Display<I> where I: DisplayInterface {
-    fn new(interface: I, dimensions: Dimensions, rotation: u8) -> Self {
+    pub fn new(interface: I, dimensions: Dimensions, rotation: Rotation) -> Self {
         Self { interface, dimensions, rotation }
     }
 
     /// Perform a hardware reset followed by software reset
-    fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D) -> Result<(), I::Error> {
+    pub fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D) -> Result<(), I::Error> {
         self.interface.reset(delay);
         Command::SoftReset.execute(&mut self.interface)?;
         self.interface.busy_wait();
-        Ok(())
+
+        self.init(Config {})
     }
 
     /// Initialise the controller according to Section 9: Typical Operating Sequence
@@ -65,7 +80,7 @@ impl<I> Display<I> where I: DisplayInterface {
         Ok(())
     }
 
-    fn update<D: hal::blocking::delay::DelayMs<u8>>(&mut self, black: &[u8], red: &[u8], delay: &mut D) -> Result<(), I::Error> {
+    pub fn update<D: hal::blocking::delay::DelayMs<u8>>(&mut self, black: &[u8], red: &[u8], delay: &mut D) -> Result<(), I::Error> {
         // Write the B/W RAM
         Command::XAddress(0).execute(&mut self.interface)?;
         Command::YAddress(0).execute(&mut self.interface)?;
@@ -79,7 +94,7 @@ impl<I> Display<I> where I: DisplayInterface {
         // Kick off the display update
         Command::UpdateDisplayOption2(0xC7).execute(&mut self.interface)?;
         Command::UpdateDisplay.execute(&mut self.interface)?;
-        delay.delay_ms(5); // Needed?
+        delay.delay_ms(5);
         // TODO: We don't really need to wait here... the program can go off and do other things
         // and only busy wait if it wants to talk to the display again. Could possibly treat
         // the interface like a smart pointer in which "acquiring" it would wait until it's not
@@ -89,7 +104,19 @@ impl<I> Display<I> where I: DisplayInterface {
         Ok(())
     }
 
-    fn deep_sleep(&mut self) -> Result<(), I::Error> {
+    pub fn deep_sleep(&mut self) -> Result<(), I::Error> {
         Command::DeepSleepMode(DeepSleepMode::PreserveRAM).execute(&mut self.interface)
+    }
+
+    pub fn rows(&self) -> u16 {
+        self.dimensions.rows
+    }
+
+    pub fn cols(&self) -> u8 {
+        self.dimensions.cols
+    }
+
+    pub fn rotation(&self) -> Rotation {
+        self.rotation
     }
 }
