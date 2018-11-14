@@ -42,9 +42,12 @@ pub enum RamOption {
 
 #[derive(Clone, Copy)]
 pub enum DeepSleepMode {
-    Mode1,
-    Mode2,
+    /// Not sleeping
     Normal,
+    /// Deep sleep with RAM preserved
+    Mode1,
+    /// Deep sleep RAM not preserved
+    Mode2,
 }
 
 pub enum Command {
@@ -204,13 +207,14 @@ macro_rules! pack {
 }
 
 impl Command {
-    fn execute<I: DisplayInterface>(self, interface: &mut I) -> Result<(), I::Error> {
+    pub(crate) fn execute<I: DisplayInterface>(self, interface: &mut I) -> Result<(), I::Error> {
         use self::Command::*;
 
         let mut buf = [0u8; 4];
         let (command, data) = match self {
             DriverOutputControl(gate_lines, scanning_seq_and_dir) => {
-                pack!(buf, 0x01, [0xD3, 0x00, 0x00])
+                let [upper, lower] = u16_as_u8(gate_lines);
+                pack!(buf, 0x01, [lower, upper, scanning_seq_and_dir])
             }
             GateDrivingVoltage(voltages) => {
                 pack!(buf, 0x03, [voltages])
@@ -271,8 +275,9 @@ impl Command {
             // }
             // VCOMSenseDuration(u8) => {
             // }
-            // WriteVCOM(u8) => {
-            // }
+            WriteVCOM(value) => {
+                pack!(buf, 0x2C, [value])
+            }
             DummyLinePeriod(period) => {
                 debug_assert!(Contains::contains(&(0..=MAX_DUMMY_LINE_PERIOD), period));
                 pack!(buf, 0x3A, [period])
@@ -306,6 +311,33 @@ impl Command {
                 pack!(buf, 0x7E, [value])
             }
             _ => unimplemented!(),
+        };
+
+        interface.send_command(command)?;
+        if data.len() == 0 {
+            Ok(())
+        } else {
+            interface.send_data(data)
+        }
+    }
+}
+
+impl<'buf> BufCommand<'buf> {
+    pub(crate) fn execute<I: DisplayInterface>(self, interface: &mut I) -> Result<(), I::Error> {
+        use self::BufCommand::*;
+
+        let (command, data) = match self {
+            WriteBlackData(buffer) => {
+                // TODO: Handle rotation
+                (0x24, buffer)
+            }
+            WriteRedData(buffer) => {
+                // TODO: Handle rotation
+                (0x26, buffer)
+            }
+            WriteLUT(buffer) => {
+                (0x32, buffer)
+            }
         };
 
         interface.send_command(command)?;
