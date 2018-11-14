@@ -3,7 +3,15 @@ use hal;
 // Section 15.2 of the HINK-E0213A07 data sheet says to hold for 10ms
 const RESET_DELAY_MS: u8 = 10;
 
-pub struct DisplayInterface<SPI, CS, BUSY, DC, RESET> {
+pub trait DisplayInterface {
+    type Error;
+
+    fn send_command(&mut self, command: u8) -> Result<(), Self::Error>;
+    fn send_data(&mut self, data: &[u8]) -> Result<(), Self::Error>;
+    fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D);
+}
+
+pub struct Interface<SPI, CS, BUSY, DC, RESET> {
     /// SPI
     spi: SPI,
     /// CS for SPI
@@ -16,7 +24,7 @@ pub struct DisplayInterface<SPI, CS, BUSY, DC, RESET> {
     reset: RESET,
 }
 
-impl<SPI, CS, BUSY, DC, RESET> DisplayInterface<SPI, CS, BUSY, DC, RESET>
+impl<SPI, CS, BUSY, DC, RESET> Interface<SPI, CS, BUSY, DC, RESET>
 where
     SPI: hal::blocking::spi::Write<u8>,
     CS: hal::digital::OutputPin,
@@ -32,26 +40,6 @@ where
             dc,
             reset,
         }
-    }
-
-    fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D) {
-        self.reset.set_low();
-        delay.delay_ms(RESET_DELAY_MS);
-        self.reset.set_high();
-        delay.delay_ms(RESET_DELAY_MS);
-    }
-
-    fn send_command(&mut self, command: u8) -> Result<(), SPI::Error> {
-        self.dc.set_low();
-        self.write(&[command])?;
-        self.dc.set_high();
-
-        Ok(())
-    }
-
-    fn send_data(&mut self, data: &[u8]) -> Result<(), SPI::Error> {
-        self.dc.set_high();
-        self.write(data)
     }
 
     fn write(&mut self, data: &[u8]) -> Result<(), SPI::Error> {
@@ -77,5 +65,36 @@ where
 
     fn busy_wait(&self) {
         while self.busy.is_high() {}
+    }
+}
+
+impl<SPI, CS, BUSY, DC, RESET> DisplayInterface for Interface<SPI, CS, BUSY, DC, RESET> 
+where
+    SPI: hal::blocking::spi::Write<u8>,
+    CS: hal::digital::OutputPin,
+    BUSY: hal::digital::InputPin,
+    DC: hal::digital::OutputPin,
+    RESET: hal::digital::OutputPin,
+{
+    type Error = SPI::Error;
+
+    fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D) {
+        self.reset.set_low();
+        delay.delay_ms(RESET_DELAY_MS);
+        self.reset.set_high();
+        delay.delay_ms(RESET_DELAY_MS);
+    }
+
+    fn send_command(&mut self, command: u8) -> Result<(), Self::Error> {
+        self.dc.set_low();
+        self.write(&[command])?;
+        self.dc.set_high();
+
+        Ok(())
+    }
+
+    fn send_data(&mut self, data: &[u8]) -> Result<(), Self::Error> {
+        self.dc.set_high();
+        self.write(data)
     }
 }

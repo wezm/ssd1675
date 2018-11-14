@@ -1,17 +1,26 @@
+use core;
 use interface::DisplayInterface;
 
+const MAX_GATES: u16 = 296;
+const MAX_DUMMY_LINE_PERIOD: u8 = 127;
 
-/// The address increment orientation when writing image data. This configures how the controller will
-/// auto-increment the row and column addresses when image data is written using the
+trait Contains<C> where C: Copy + PartialOrd {
+    fn contains(&self, item: C) -> bool;
+}
+
+/// The address increment orientation when writing image data. This configures how the controller
+/// will auto-increment the row and column addresses when image data is written using the
 /// `WriteImageData` command.
 #[derive(Clone, Copy)]
 pub enum IncrementAxis {
+    /// X direction
     Horizontal,
+    /// Y direction
     Vertical,
 }
 
 #[derive(Clone, Copy)]
-enum DataEntryMode {
+pub enum DataEntryMode {
     DecrementXDecrementY,
     IncrementXDecrementY,
     DecrementXIncrementY,
@@ -19,16 +28,23 @@ enum DataEntryMode {
 }
 
 #[derive(Clone, Copy)]
-enum TemperatureSensor {
+pub enum TemperatureSensor {
     Internal,
     External,
 }
 
 #[derive(Clone, Copy)]
-enum RamOption {
+pub enum RamOption {
     Normal,
     Bypass,
     Invert,
+}
+
+#[derive(Clone, Copy)]
+pub enum DeepSleepMode {
+    Mode1,
+    Mode2,
+    Normal,
 }
 
 pub enum Command {
@@ -39,9 +55,10 @@ pub enum Command {
     /// Set the gate driving voltage.
     GateDrivingVoltage(u8),
     /// Set the source driving voltage.
-    /// 0: VHS1/VSH2
-    /// 1: VSL
-    SourceDrivingVoltage(u16, u8),
+    /// 0: VSH1
+    /// 1: VSH2
+    /// 2: VSL
+    SourceDrivingVoltage(u8, u8, u8),
     /// Booster enable with phases 1 to 3 for soft start current and duration setting
     /// 0: Soft start setting for phase 1
     /// 1: Soft start setting for phase 2
@@ -51,7 +68,7 @@ pub enum Command {
     /// Set the scanning start position of the gate driver
     GateScanStartPostion(u16),
     /// Set deep sleep mode
-    DeepSleepMode(u8),
+    DeepSleepMode(DeepSleepMode),
     /// Set the data entry mode and increament axis
     DataEntryMode(DataEntryMode, IncrementAxis),
     /// Perform a soft reset, and reset all parameters to their default values
@@ -71,7 +88,7 @@ pub enum Command {
     ReadTemperatureSensor(u16),
     /// Write a command to the external temperature sensor
     WriteExternalTemperatureSensor(u8, u8, u8),
-    /// Activate dispay update sequence. BUSY will be high when in progress.
+    /// Activate display update sequence. BUSY will be high when in progress.
     UpdateDisplay,
     /// Set RAM content options for update display command.
     /// 0: Black/White RAM option
@@ -115,7 +132,7 @@ pub enum Command {
     /// Set the start/end positions of the window address in the Y direction
     /// 0: Start
     /// 1: End
-    StartEndYPosition(u8, u8),
+    StartEndYPosition(u16, u16),
     /// Auto write red RAM for regular pattern
     AutoWriteRedPattern(u8),
     /// Auto write red RAM for regular pattern
@@ -146,4 +163,168 @@ pub enum BufCommand<'buf> {
     WriteRedData(&'buf [u8]),
     /// Write LUT register (70 bytes)
     WriteLUT(&'buf [u8]),
+}
+
+fn u16_as_u8(val: u16) -> [u8; 2] {
+    [(val & 0xFF00 >> 8) as u8, (val & 0xFF) as u8]
+}
+
+/// Populates data buffer (array) and returns a pair (tuple) with command and 
+/// appropriately sized slice into populated buffer.
+/// E.g.
+///
+/// let mut buf = [0u8; 4];
+/// let (command, data) = pack!(buf, 0x3C, [0x12, 0x34]);
+macro_rules! pack {
+    ($buf:ident, $cmd:expr,[]) => {
+        ($cmd, &$buf[..0])
+    };
+    ($buf:ident, $cmd:expr,[$arg0:expr]) => {{
+        $buf[0] = $arg0;
+        ($cmd, &$buf[..1])
+    }};
+    ($buf:ident, $cmd:expr,[$arg0:expr, $arg1:expr]) => {{
+        $buf[0] = $arg0;
+        $buf[1] = $arg1;
+        ($cmd, &$buf[..2])
+    }};
+    ($buf:ident, $cmd:expr,[$arg0:expr, $arg1:expr, $arg2:expr]) => {{
+        $buf[0] = $arg0;
+        $buf[1] = $arg1;
+        $buf[2] = $arg2;
+        ($cmd, &$buf[..3])
+    }};
+    ($buf:ident, $cmd:expr,[$arg0:expr, $arg1:expr, $arg2:expr, $arg3:expr]) => {{
+        $buf[0] = $arg0;
+        $buf[1] = $arg1;
+        $buf[2] = $arg2;
+        $buf[3] = $arg3;
+        ($cmd, &$buf[..4])
+    }};
+}
+
+impl Command {
+    fn execute<I: DisplayInterface>(self, interface: &mut I) -> Result<(), I::Error> {
+        use self::Command::*;
+
+        let mut buf = [0u8; 4];
+        let (command, data) = match self {
+            DriverOutputControl(gate_lines, scanning_seq_and_dir) => {
+                pack!(buf, 0x01, [0xD3, 0x00, 0x00])
+            }
+            GateDrivingVoltage(voltages) => {
+                pack!(buf, 0x03, [voltages])
+            }
+            SourceDrivingVoltage(vsh1, vsh2, vsl) => {
+                pack!(buf, 0x04, [vsh1, vsh2, vsl])
+            }
+            BoosterEnable(phase1, phase2, phase3, duration) => {
+                pack!(buf, 0x0C, [phase1, phase2, phase3, duration])
+            }
+            GateScanStartPostion(position) => {
+                debug_assert!(Contains::contains(&(0..MAX_GATES), position));
+                let [upper, lower] = u16_as_u8(position);
+                pack!(buf, 0x0F, [lower, upper])
+            }
+            DeepSleepMode(mode) => {
+                let mode = match mode {
+                    self::DeepSleepMode::Normal => 0b00,
+                    self::DeepSleepMode::Mode1 => 0b01,
+                    self::DeepSleepMode::Mode2 => 0b11,
+                };
+
+                pack!(buf, 0x10, [mode])
+            }
+            DataEntryMode(data_entry_mode, increment_axis) => {
+                let mode = match data_entry_mode {
+                    self::DataEntryMode::DecrementXDecrementY => 0b00,
+                    self::DataEntryMode::IncrementXDecrementY => 0b01,
+                    self::DataEntryMode::DecrementXIncrementY => 0b10,
+                    self::DataEntryMode::IncrementYIncrementX => 0b11,
+                };
+                let axis = match increment_axis {
+                    IncrementAxis::Horizontal => 0b000,
+                    IncrementAxis::Vertical => 0b100,
+                };
+
+                pack!(buf, 0x11, [axis | mode])
+            }
+            SoftReset => {
+                pack!(buf, 0x12, [])
+            }
+            // TemperatatSensorSelection(TemperatureSensor) => {
+            // }
+            // WriteTemperatureSensor(u16) => {
+            // }
+            // ReadTemperatureSensor(u16) => {
+            // }
+            // WriteExternalTemperatureSensor(u8, u8, u8) => {
+            // }
+            UpdateDisplay => {
+                pack!(buf, 0x20, [])
+            }
+            // UpdateDisplayOption1(RamOption, RamOption) => {
+            // }
+            // UpdateDisplayOption2(u8) => {
+            // }
+            // EnterVCOMSensing => {
+            // }
+            // VCOMSenseDuration(u8) => {
+            // }
+            // WriteVCOM(u8) => {
+            // }
+            DummyLinePeriod(period) => {
+                debug_assert!(Contains::contains(&(0..=MAX_DUMMY_LINE_PERIOD), period));
+                pack!(buf, 0x3A, [period])
+            }
+            GateLineWidth(tgate) => {
+                pack!(buf, 0x3B, [tgate])
+            }
+            BorderWaveform(border_waveform) => {
+                pack!(buf, 0x3C, [border_waveform])
+            }
+            StartEndXPosition(start, end) => {
+                pack!(buf, 0x44, [start, end])
+            }
+            StartEndYPosition(start, end) => {
+                let [start_upper, start_lower] = u16_as_u8(start);
+                let [end_upper, end_lower] = u16_as_u8(end);
+                pack!(buf, 0x45, [start_lower, start_upper, end_lower, end_upper])
+            }
+            // AutoWriteRedPattern(u8) => {
+            // }
+            // AutoWriteBlackPattern(u8) => {
+            // }
+            // XAddress(u8) => {
+            // }
+            // YAddress(u8) => {
+            // }
+            AnalogBlockControl(value) => {
+                pack!(buf, 0x74, [value])
+            }
+            DigitalBlockControl(value) => {
+                pack!(buf, 0x7E, [value])
+            }
+            _ => unimplemented!(),
+        };
+
+        interface.send_command(command)?;
+        if data.len() == 0 {
+            Ok(())
+        } else {
+            interface.send_data(data)
+        }
+    }
+}
+
+impl<C> Contains<C> for core::ops::Range<C> where C: Copy + PartialOrd {
+    fn contains(&self, item: C) -> bool {
+        item >= self.start && item < self.end
+    }
+}
+
+impl<C> Contains<C> for core::ops::RangeInclusive<C> where C: Copy + PartialOrd {
+    fn contains(&self, item: C) -> bool {
+        item >= *self.start() && item <= *self.end()
+    }
 }
