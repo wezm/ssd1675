@@ -1,4 +1,4 @@
-# SSD1675 EPD dislpay driver
+# SSD1675 EPD display driver
 
 [Insert picture of Inky pHAT here]
 
