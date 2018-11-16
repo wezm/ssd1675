@@ -2,6 +2,10 @@
 
 extern crate embedded_hal as hal;
 
+#[cfg(test)]
+#[macro_use]
+extern crate std;
+
 mod command;
 mod interface;
 mod display;
@@ -13,11 +17,3 @@ pub use interface::Interface;
 pub use display::{Display, Dimensions, Rotation};
 pub use graphics::GraphicDisplay;
 pub use color::Color;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}

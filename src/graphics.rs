@@ -19,15 +19,20 @@ impl<'a, I> GraphicDisplay<'a, I> where I: DisplayInterface {
         self.display.update(self.black_buffer, self.red_buffer, delay)
     }
 
-    pub fn clear(&mut self, _color: Color) {
-        // TODO: Support color
+    pub fn clear(&mut self, color: Color) {
+        let (black, red) = match color {
+            Color::White => (0xFF, 0x00),
+            Color::Black => (0x00, 0x00),
+            Color::Red => (0xFF, 0xFF),
+        };
+
         for byte in &mut self.black_buffer.iter_mut() {
-            *byte = 1; // background_color.get_byte_value();
+            *byte = black; // background_color.get_byte_value();
         }
 
         // TODO: Combine loops
         for byte in &mut self.red_buffer.iter_mut() {
-            *byte = 0; // background_color.get_byte_value();
+            *byte = red; // background_color.get_byte_value();
         }
     }
 
@@ -113,9 +118,9 @@ mod tests {
     use super::*;
     use ::{Display, DisplayInterface, Dimensions, GraphicDisplay, Color, Rotation};
 
-    const ROWS: u16 = 212;
-    const COLS: u8 = 104;
-    const BUFFER_SIZE: usize = ROWS as usize * COLS as usize;
+    const ROWS: u16 = 3;
+    const COLS: u8 = 3;
+    const BUFFER_SIZE: usize = 2; //((ROWS * COLS as u16) as f32 / 8.).ceil() as usize;
 
     struct MockInterface {}
     struct MockError {}
@@ -129,14 +134,14 @@ mod tests {
     impl DisplayInterface for MockInterface {
         type Error = MockError;
 
-        fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D) {
+        fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, _delay: &mut D) {
             // self.reset.set_low();
             // delay.delay_ms(RESET_DELAY_MS);
             // self.reset.set_high();
             // delay.delay_ms(RESET_DELAY_MS);
         }
 
-        fn send_command(&mut self, command: u8) -> Result<(), Self::Error> {
+        fn send_command(&mut self, _command: u8) -> Result<(), Self::Error> {
             // self.dc.set_low();
             // self.write(&[command])?;
             // self.dc.set_high();
@@ -144,7 +149,7 @@ mod tests {
             Ok(())
         }
 
-        fn send_data(&mut self, data: &[u8]) -> Result<(), Self::Error> {
+        fn send_data(&mut self, _data: &[u8]) -> Result<(), Self::Error> {
             // self.dc.set_high();
             // self.write(data)
             Ok(())
@@ -159,12 +164,56 @@ mod tests {
     // }
 
     #[test]
-    fn set_corner_pixels() {
+    fn clear_white() {
         let interface = MockInterface::new();
         let dimensions = Dimensions { rows: ROWS, cols: COLS };
-        let mut black_buffer = [0u8; BUFFER_SIZE]; // FIXME: This is using 1 byte per pixel when it only needs to be one bit
+        let mut black_buffer = [0u8; BUFFER_SIZE];
         let mut red_buffer = [0u8; BUFFER_SIZE];
+
+        {
         let display = Display::new(interface, dimensions, Rotation::Rotate270);
-        GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
+        let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
+
+        display.clear(Color::White);
+        }
+
+        assert_eq!(black_buffer, [0xFF, 0xFF]);
+        assert_eq!(red_buffer, [0x00, 0x00]);
+    }
+
+    #[test]
+    fn clear_black() {
+        let interface = MockInterface::new();
+        let dimensions = Dimensions { rows: ROWS, cols: COLS };
+        let mut black_buffer = [0u8; BUFFER_SIZE];
+        let mut red_buffer = [0u8; BUFFER_SIZE];
+
+        {
+        let display = Display::new(interface, dimensions, Rotation::Rotate270);
+        let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
+
+        display.clear(Color::Black);
+        }
+
+        assert_eq!(black_buffer, [0x00, 0x00]);
+        assert_eq!(red_buffer, [0x00, 0x00]);
+    }
+
+    #[test]
+    fn clear_red() {
+        let interface = MockInterface::new();
+        let dimensions = Dimensions { rows: ROWS, cols: COLS };
+        let mut black_buffer = [0u8; BUFFER_SIZE];
+        let mut red_buffer = [0u8; BUFFER_SIZE];
+
+        {
+        let display = Display::new(interface, dimensions, Rotation::Rotate270);
+        let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
+
+        display.clear(Color::Red);
+        }
+
+        assert_eq!(black_buffer, [0xFF, 0xFF]);
+        assert_eq!(red_buffer, [0xFF, 0xFF]);
     }
 }
