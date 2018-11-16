@@ -14,7 +14,7 @@ extern crate embedded_graphics;
 use embedded_graphics::coord::Coord;
 use embedded_graphics::fonts::{Font12x16, Font6x8};
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::{Circle, Line};
+use embedded_graphics::primitives::{Circle, Line, Rect};
 use embedded_graphics::Drawing;
 
 // HAL (Traits)
@@ -84,13 +84,10 @@ fn main() -> Result<(), std::io::Error> {
         Font12x16::render_str("Hello Rust")
             .with_stroke(Some(Color::Red))
             .with_fill(Some(Color::White))
-            .translate(Coord::new(5, 10))
+            .translate(Coord::new(5, 88))
             .into_iter(),
     );
     println!("draw");
-
-    display.update(&mut delay).expect("error updating display");
-    println!("update...");
 
     // display.set_rotation(DisplayRotation::Rotate90);
     // display.draw(
@@ -128,22 +125,30 @@ fn main() -> Result<(), std::io::Error> {
     // println!("Now test new graphics with default rotation and some special stuff:");
     // display.clear_buffer(Color::White);
 
-    // // draw a analog clock
+    // draw a analog clock
+    display.draw(
+        Circle::new(Coord::new(32, 32), 30)
+            .with_stroke(Some(Color::Black))
+            .with_stroke_width(2)
+            .into_iter(),
+    );
     // display.draw(
-    //     Circle::new(Coord::new(64, 64), 64)
+    //     Line::new(Coord::new(32, 32), Coord::new(0, 32))
     //         .with_stroke(Some(Color::Black))
+    //         .with_stroke_width(2)
     //         .into_iter(),
     // );
     // display.draw(
-    //     Line::new(Coord::new(64, 64), Coord::new(0, 64))
+    //     Line::new(Coord::new(32, 32), Coord::new(40, 40))
     //         .with_stroke(Some(Color::Black))
+    //         .with_stroke_width(2)
     //         .into_iter(),
     // );
-    // display.draw(
-    //     Line::new(Coord::new(64, 64), Coord::new(80, 80))
-    //         .with_stroke(Some(Color::Black))
-    //         .into_iter(),
-    // );
+    display.draw(
+        Rect::new(Coord::new(32, 32), Coord::new(64, 64))
+            .with_fill(Some(Color::Black))
+            .into_iter(),
+    );
 
     // // draw white on black background
     // display.draw(
@@ -194,6 +199,8 @@ fn main() -> Result<(), std::io::Error> {
 
     //     delay.delay_ms(1_000u16);
     // }
+    display.update(&mut delay).expect("error updating display");
+    println!("update...");
 
     println!("Finished - going to sleep");
     display.deep_sleep()

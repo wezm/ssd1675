@@ -64,7 +64,8 @@ impl<I> Display<I> where I: DisplayInterface {
         Command::DummyLinePeriod(0x07).execute(&mut self.interface)?;
         Command::GateLineWidth(0x04).execute(&mut self.interface)?;
 
-        Command::SourceDrivingVoltage(0x2D, 0xB2, 0x22).execute(&mut self.interface)?;
+        // Command::GateDrivingVoltage(0b10000 | 0b0001);
+        // Command::SourceDrivingVoltage(0x2D, 0xB2, 0x22).execute(&mut self.interface)?;
         Command::WriteVCOM(0x3C).execute(&mut self.interface)?;
 
         // POR is HiZ. Need pull from config
