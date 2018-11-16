@@ -51,7 +51,7 @@ impl<'a, I> GraphicDisplay<'a, I> where I: DisplayInterface {
                 self.red_buffer[index] &= !bit;
             }
             Color::Red => {
-                self.black_buffer[index] &= !bit;
+                self.black_buffer[index] |= bit;
                 self.red_buffer[index] |= bit;
             }
         }
@@ -117,10 +117,15 @@ where
 mod tests {
     use super::*;
     use ::{Display, DisplayInterface, Dimensions, GraphicDisplay, Color, Rotation};
+    use self::embedded_graphics::coord::Coord;
+    use self::embedded_graphics::fonts::{Font12x16, Font6x8};
+    use self::embedded_graphics::prelude::*;
+    use self::embedded_graphics::primitives::{Circle, Line, Rect};
+    use self::embedded_graphics::Drawing;
 
     const ROWS: u16 = 3;
-    const COLS: u8 = 3;
-    const BUFFER_SIZE: usize = 2; //((ROWS * COLS as u16) as f32 / 8.).ceil() as usize;
+    const COLS: u8 = 8;
+    const BUFFER_SIZE: usize = (ROWS * COLS as u16) as usize / 8;
 
     struct MockInterface {}
     struct MockError {}
@@ -177,8 +182,8 @@ mod tests {
         display.clear(Color::White);
         }
 
-        assert_eq!(black_buffer, [0xFF, 0xFF]);
-        assert_eq!(red_buffer, [0x00, 0x00]);
+        assert_eq!(black_buffer, [0xFF, 0xFF, 0xFF]);
+        assert_eq!(red_buffer, [0x00, 0x00, 0x00]);
     }
 
     #[test]
@@ -195,8 +200,8 @@ mod tests {
         display.clear(Color::Black);
         }
 
-        assert_eq!(black_buffer, [0x00, 0x00]);
-        assert_eq!(red_buffer, [0x00, 0x00]);
+        assert_eq!(black_buffer, [0x00, 0x00, 0x00]);
+        assert_eq!(red_buffer, [0x00, 0x00, 0x00]);
     }
 
     #[test]
@@ -213,7 +218,52 @@ mod tests {
         display.clear(Color::Red);
         }
 
-        assert_eq!(black_buffer, [0xFF, 0xFF]);
-        assert_eq!(red_buffer, [0xFF, 0xFF]);
+        assert_eq!(black_buffer, [0xFF, 0xFF, 0xFF]);
+        assert_eq!(red_buffer, [0xFF, 0xFF, 0xFF]);
+    }
+
+    #[test]
+    fn draw_rect_white() {
+        let interface = MockInterface::new();
+        let dimensions = Dimensions { rows: ROWS, cols: COLS };
+        let mut black_buffer = [0u8; BUFFER_SIZE];
+        let mut red_buffer = [0u8; BUFFER_SIZE];
+
+        {
+        let display = Display::new(interface, dimensions, Rotation::Rotate0);
+        let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
+
+        display.draw(Rect::new(Coord::new(0,0), Coord::new(2, 2)).with_stroke(Some(Color::White)).into_iter());
+        }
+
+        assert_eq!(black_buffer, [
+                   0b11100000,
+                   0b10100000,
+                   0b11100000]);
+        assert_eq!(red_buffer, [0b00000000, 0b00000000, 0b00000000]);
+    }
+
+    #[test]
+    fn draw_rect_red() {
+        let interface = MockInterface::new();
+        let dimensions = Dimensions { rows: ROWS, cols: COLS };
+        let mut black_buffer = [0u8; BUFFER_SIZE];
+        let mut red_buffer = [0u8; BUFFER_SIZE];
+
+        {
+        let display = Display::new(interface, dimensions, Rotation::Rotate0);
+        let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
+
+        display.draw(Rect::new(Coord::new(1,0), Coord::new(3, 2)).with_stroke(Some(Color::Red)).into_iter());
+        }
+
+        assert_eq!(black_buffer, [
+                   0b01110000,
+                   0b01010000,
+                   0b01110000]);
+        assert_eq!(red_buffer, [
+                   0b01110000,
+                   0b01010000,
+                   0b01110000]);
     }
 }

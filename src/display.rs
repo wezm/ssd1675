@@ -40,6 +40,7 @@ pub struct Display<I> where I: DisplayInterface {
 
 impl<I> Display<I> where I: DisplayInterface {
     pub fn new(interface: I, dimensions: Dimensions, rotation: Rotation) -> Self {
+        // TODO: Assert dimensions are evenly divisible by 8
         Self { interface, dimensions, rotation }
     }
 
