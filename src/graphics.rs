@@ -107,3 +107,64 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ::{Display, DisplayInterface, Dimensions, GraphicDisplay, Color, Rotation};
+
+    const ROWS: u16 = 212;
+    const COLS: u8 = 104;
+    const BUFFER_SIZE: usize = ROWS as usize * COLS as usize;
+
+    struct MockInterface {}
+    struct MockError {}
+
+    impl MockInterface {
+        fn new() -> Self {
+            MockInterface {}
+        }
+    }
+
+    impl DisplayInterface for MockInterface {
+        type Error = MockError;
+
+        fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D) {
+            // self.reset.set_low();
+            // delay.delay_ms(RESET_DELAY_MS);
+            // self.reset.set_high();
+            // delay.delay_ms(RESET_DELAY_MS);
+        }
+
+        fn send_command(&mut self, command: u8) -> Result<(), Self::Error> {
+            // self.dc.set_low();
+            // self.write(&[command])?;
+            // self.dc.set_high();
+
+            Ok(())
+        }
+
+        fn send_data(&mut self, data: &[u8]) -> Result<(), Self::Error> {
+            // self.dc.set_high();
+            // self.write(data)
+            Ok(())
+        }
+
+        fn busy_wait(&self) {
+            // while self.busy.is_high() {}
+        }
+    }
+
+    // fn setup_display<'a>() -> GraphicDisplay<'a, MockInterface> {
+    // }
+
+    #[test]
+    fn set_corner_pixels() {
+        let interface = MockInterface::new();
+        let dimensions = Dimensions { rows: ROWS, cols: COLS };
+        let mut black_buffer = [0u8; BUFFER_SIZE]; // FIXME: This is using 1 byte per pixel when it only needs to be one bit
+        let mut red_buffer = [0u8; BUFFER_SIZE];
+        let display = Display::new(interface, dimensions, Rotation::Rotate270);
+        GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
+    }
+}
