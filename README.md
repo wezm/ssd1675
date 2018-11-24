@@ -1,6 +1,6 @@
 # SSD1675 EPD display driver
 
-[Insert picture of Inky pHAT here]
+<img src="https://raw.githubusercontent.com/wezm/ssd1675/master/IMG_2198.jpg" width="459" alt="Photo of Inky pHAT ePaper display on Raspberry Pi Zero W" />
 
 Rust driver for the [Solomon Systech SSD1675][SSD1675] e-Paper display (EPD)
 controller, for use with [embedded-hal].
@@ -8,14 +8,14 @@ controller, for use with [embedded-hal].
 ## Description
 
 This driver is intended to work on embedded platforms using the `embedded-hal`
-trait library. It is `no_std`, contains no added `unsafe`, and does not require
-an allocator. It supports the 4-wire SPI interface.
+trait library. It is `no_std` compatible, only uses safe Rust, and does not
+require an allocator. It supports the 4-wire SPI interface.
 
 ## Tested Devices
 
 The library has been tested and confirmed working on these devices:
 
-* Red/Black/White [Inky pHAT] version 2 on Raspberry Pi Zero
+* Red/Black/White [Inky pHAT] version 2 on Raspberry Pi Zero (pictured above)
 
 ## Credits
 
