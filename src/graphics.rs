@@ -37,7 +37,6 @@ impl<'a, I> GraphicDisplay<'a, I> where I: DisplayInterface {
     }
 
     fn set_pixel(&mut self, x: u32, y: u32, color: Color) {
-        // Give us index inside the buffer and the bit-position in that u8 which needs to be changed
         let (index, bit) = rotation(x, y, self.cols() as u32, self.rows() as u32, self.rotation());
         let index = index as usize;
 
@@ -93,6 +92,23 @@ fn rotation(x: u32, y: u32, width: u32, height: u32, rotation: Rotation) -> (u32
     }
 }
 
+fn outside_display(x: u32, y: u32, width: u32, height: u32, rotation: Rotation) -> bool {
+    match rotation {
+        Rotation::Rotate0 | Rotation::Rotate180 => {
+            if x >= width || y >= height {
+                return true;
+            }
+        }
+        Rotation::Rotate90 | Rotation::Rotate270 => {
+            if y >= width || x >= height {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
 #[cfg(feature = "graphics")]
 extern crate embedded_graphics;
 #[cfg(feature = "graphics")]
@@ -108,6 +124,10 @@ where
         T: Iterator<Item = Pixel<Color>>,
     {
         for Pixel(UnsignedCoord(x, y), colour) in item_pixels {
+            if outside_display(x, y, self.cols() as u32, self.rows() as u32, self.rotation()) {
+                continue;
+            }
+
             self.set_pixel(x, y, colour);
         }
     }

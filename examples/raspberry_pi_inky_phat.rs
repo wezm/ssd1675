@@ -1,28 +1,29 @@
-// the library for the embedded linux device
 extern crate linux_embedded_hal;
 use linux_embedded_hal::spidev::{self, SpidevOptions};
 use linux_embedded_hal::sysfs_gpio::Direction;
 use linux_embedded_hal::Delay;
 use linux_embedded_hal::{Pin, Spidev};
 
-// the eink library
 extern crate ssd1675;
-use ssd1675::{Display, DisplayInterface, Dimensions, GraphicDisplay, Color, Rotation};
+use ssd1675::{Display, Dimensions, GraphicDisplay, Color, Rotation};
 
 // Graphics
 extern crate embedded_graphics;
 use embedded_graphics::coord::Coord;
-use embedded_graphics::fonts::{Font12x16, Font6x8};
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::{Circle, Line, Rect};
 use embedded_graphics::Drawing;
 
-// HAL (Traits)
-extern crate embedded_hal;
-use embedded_hal::prelude::*;
+// Font
+extern crate profont;
+use profont::{ProFont9Point, ProFont12Point, ProFont14Point, ProFont24Point};
 
-// activate spi, gpio in raspi-config
-// needs to be run with sudo because of some sysfs_gpio permission problems and follow-up timing problems
+use std::process::Command;
+use std::{fs, io};
+use std::time::Duration;
+use std::thread::sleep;
+
+// Activate SPI, GPIO in raspi-config needs to be run with sudo because of some sysfs_gpio
+// permission problems and follow-up timing problems
 // see https://github.com/rust-embedded/rust-sysfs-gpio/issues/5 and follow-up issues
 
 const ROWS: u16 = 212;
@@ -68,141 +69,99 @@ fn main() -> Result<(), std::io::Error> {
 
     let controller = ssd1675::Interface::new(spi, cs, busy, dc, reset);
 
-    // println!("Test all the rotations");
     let dimensions = Dimensions { rows: ROWS, cols: COLS };
-    let mut black_buffer = [0u8; ROWS as usize * COLS as usize]; // FIXME: This is using 1 byte per pixel when it only needs to be one bit
-    let mut red_buffer = [0u8; ROWS as usize * COLS as usize];
+    let mut black_buffer = [0u8; ROWS as usize * COLS as usize / 8];
+    let mut red_buffer = [0u8; ROWS as usize * COLS as usize / 8];
     let display = Display::new(controller, dimensions, Rotation::Rotate270);
     let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
-    display.reset(&mut delay).expect("error resetting display");
-    // display.set_rotation(DisplayRotation::Rotate0);
-    println!("reset and initialised");
 
-    display.clear(Color::White);
-    println!("clear");
-    display.draw(
-        Font12x16::render_str("Hello Rust")
-            .with_stroke(Some(Color::Red))
-            .with_fill(Some(Color::White))
-            .translate(Coord::new(5, 88))
-            .into_iter(),
-    );
-    println!("draw");
+    loop {
+        display.reset(&mut delay).expect("error resetting display");
+        println!("Reset and initialised");
+        let one_minute = Duration::from_secs(60);
 
-    // display.set_rotation(DisplayRotation::Rotate90);
-    // display.draw(
-    //     Font::render_str("Rotate 90!")
-    //         .with_stroke(Some(Color::Black))
-    //         .with_fill(Some(Color::White))
-    //         .translate(Coord::new(5, 50))
-    //         .into_iter(),
-    // );
+        display.clear(Color::White);
+        println!("Clear");
 
-    // display.set_rotation(DisplayRotation::Rotate180);
-    // display.draw(
-    //     Font6x8::render_str("Rotate 180!")
-    //         .with_stroke(Some(Color::Black))
-    //         .with_fill(Some(Color::White))
-    //         .translate(Coord::new(5, 50))
-    //         .into_iter(),
-    // );
+        display.draw(
+            ProFont24Point::render_str("Raspberry Pi")
+                .with_stroke(Some(Color::Red))
+                .with_fill(Some(Color::White))
+                .translate(Coord::new(1, -4))
+                .into_iter(),
+        );
 
-    // display.set_rotation(DisplayRotation::Rotate270);
-    // display.draw(
-    //     Font6x8::render_str("Rotate 270!")
-    //         .with_stroke(Some(Color::Black))
-    //         .with_fill(Some(Color::White))
-    //         .translate(Coord::new(5, 50))
-    //         .into_iter(),
-    // );
+        if let Ok(cpu_temp) = read_cpu_temp() {
+            display.draw(
+                ProFont14Point::render_str("CPU Temp:")
+                    .with_stroke(Some(Color::Black))
+                    .with_fill(Some(Color::White))
+                    .translate(Coord::new(1, 30))
+                    .into_iter(),
+            );
+            display.draw(
+                ProFont12Point::render_str(&format!("{:.1}°C", cpu_temp))
+                    .with_stroke(Some(Color::Black))
+                    .with_fill(Some(Color::White))
+                    .translate(Coord::new(95, 34))
+                    .into_iter(),
+            );
+        }
 
-    // epd4in2.update_frame(&mut spi, &display.buffer()).unwrap();
-    // epd4in2
-    //     .display_frame(&mut spi)
-    //     .expect("display frame new graphics");
-    // delay.delay_ms(5000u16);
+        if let Some(uptime) = read_uptime() {
+            display.draw(
+                ProFont9Point::render_str(uptime.trim())
+                    .with_stroke(Some(Color::Black))
+                    .with_fill(Some(Color::White))
+                    .translate(Coord::new(1, 93))
+                    .into_iter(),
+            );
+        }
 
-    // println!("Now test new graphics with default rotation and some special stuff:");
-    // display.clear_buffer(Color::White);
+        if let Some(uname) = read_uname() {
+            display.draw(
+                ProFont9Point::render_str(uname.trim())
+                    .with_stroke(Some(Color::Black))
+                    .with_fill(Some(Color::White))
+                    .translate(Coord::new(1, 84))
+                    .into_iter(),
+            );
+        }
 
-    // draw a analog clock
-    display.draw(
-        Circle::new(Coord::new(32, 32), 30)
-            .with_stroke(Some(Color::Black))
-            .with_stroke_width(2)
-            .into_iter(),
-    );
-    // display.draw(
-    //     Line::new(Coord::new(32, 32), Coord::new(0, 32))
-    //         .with_stroke(Some(Color::Black))
-    //         .with_stroke_width(2)
-    //         .into_iter(),
-    // );
-    // display.draw(
-    //     Line::new(Coord::new(32, 32), Coord::new(40, 40))
-    //         .with_stroke(Some(Color::Black))
-    //         .with_stroke_width(2)
-    //         .into_iter(),
-    // );
-    display.draw(
-        Rect::new(Coord::new(32, 32), Coord::new(64, 64))
-            .with_fill(Some(Color::Black))
-            .into_iter(),
-    );
+        display.update(&mut delay).expect("error updating display");
+        println!("Update...");
 
-    // // draw white on black background
-    // display.draw(
-    //     Font6x8::render_str("It's working-WoB!")
-    //         // Using Style here
-    //         .with_style(Style {
-    //             fill_color: Some(Color::Black),
-    //             stroke_color: Some(Color::White),
-    //             stroke_width: 0u8, // Has no effect on fonts
-    //         })
-    //         .translate(Coord::new(175, 250))
-    //         .into_iter(),
-    // );
+        println!("Finished - going to sleep");
+        display.deep_sleep()?;
 
-    // // use bigger/different font
-    // display.draw(
-    //     Font12x16::render_str("It's working-BoW!")
-    //         // Using Style here
-    //         .with_style(Style {
-    //             fill_color: Some(Color::White),
-    //             stroke_color: Some(Color::Black),
-    //             stroke_width: 0u8, // Has no effect on fonts
-    //         })
-    //         .translate(Coord::new(50, 200))
-    //         .into_iter(),
-    // );
-
-    // // a moving `Hello World!`
-    // let limit = 10;
-    // for i in 0..limit {
-    //     println!("Moving Hello World. Loop {} from {}", (i + 1), limit);
-
-    //     display.draw(
-    //         Font6x8::render_str("  Hello World! ")
-    //             .with_style(Style {
-    //                 fill_color: Some(Color::White),
-    //                 stroke_color: Some(Color::Black),
-    //                 stroke_width: 0u8, // Has no effect on fonts
-    //             })
-    //             .translate(Coord::new(5 + i * 12, 50))
-    //             .into_iter(),
-    //     );
-
-    //     epd4in2.update_frame(&mut spi, &display.buffer()).unwrap();
-    //     epd4in2
-    //         .display_frame(&mut spi)
-    //         .expect("display frame new graphics");
-
-    //     delay.delay_ms(1_000u16);
-    // }
-    display.update(&mut delay).expect("error updating display");
-    println!("update...");
-
-    println!("Finished - going to sleep");
-    display.deep_sleep()
+        sleep(one_minute);
+    }
 }
 
+fn read_cpu_temp() -> Result<f64, io::Error> {
+    fs::read_to_string("/sys/class/thermal/thermal_zone0/temp")?
+        .trim()
+        .parse::<i32>()
+        .map(|temp| temp as f64 / 1000.)
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
+}
+
+fn read_uptime() -> Option<String> {
+    Command::new("uptime").arg("-p").output().ok().and_then(|output| {
+        if output.status.success() {
+            String::from_utf8(output.stdout).ok()
+        } else {
+            None
+        }
+    })
+}
+
+fn read_uname() -> Option<String> {
+    Command::new("uname").arg("-smr").output().ok().and_then(|output| {
+        if output.status.success() {
+            String::from_utf8(output.stdout).ok()
+        } else {
+            None
+        }
+    })
+}
