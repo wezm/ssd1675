@@ -50,6 +50,7 @@ pub enum DeepSleepMode {
     DiscardRAM,
 }
 
+#[derive(Clone, Copy)]
 pub enum Command {
     /// Set the MUX of gate lines, scanning sequence and direction
     /// 0: MAX gate lines
@@ -207,11 +208,11 @@ macro_rules! pack {
 }
 
 impl Command {
-    pub(crate) fn execute<I: DisplayInterface>(self, interface: &mut I) -> Result<(), I::Error> {
+    pub(crate) fn execute<I: DisplayInterface>(&self, interface: &mut I) -> Result<(), I::Error> {
         use self::Command::*;
 
         let mut buf = [0u8; 4];
-        let (command, data) = match self {
+        let (command, data) = match *self {
             DriverOutputControl(gate_lines, scanning_seq_and_dir) => {
                 let [upper, lower] = u16_as_u8(gate_lines);
                 pack!(buf, 0x01, [lower, upper, scanning_seq_and_dir])
@@ -326,7 +327,7 @@ impl Command {
 }
 
 impl<'buf> BufCommand<'buf> {
-    pub(crate) fn execute<I: DisplayInterface>(self, interface: &mut I) -> Result<(), I::Error> {
+    pub(crate) fn execute<I: DisplayInterface>(&self, interface: &mut I) -> Result<(), I::Error> {
         use self::BufCommand::*;
 
         let (command, data) = match self {

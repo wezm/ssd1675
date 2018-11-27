@@ -5,13 +5,13 @@ use interface::DisplayInterface;
 use core::ops::{Deref, DerefMut};
 
 pub struct GraphicDisplay<'a, I> where I: DisplayInterface {
-    display: Display<I>,
+    display: Display<'a, I>,
     black_buffer: &'a mut [u8],
     red_buffer: &'a mut [u8],
 }
 
 impl<'a, I> GraphicDisplay<'a, I> where I: DisplayInterface {
-    pub fn new(display: Display<I>, black_buffer: &'a mut [u8], red_buffer: &'a mut [u8]) -> Self {
+    pub fn new(display: Display<'a, I>, black_buffer: &'a mut [u8], red_buffer: &'a mut [u8]) -> Self {
         GraphicDisplay { display, black_buffer, red_buffer }
     }
 
@@ -58,15 +58,15 @@ impl<'a, I> GraphicDisplay<'a, I> where I: DisplayInterface {
 }
 
 impl<'a, I> Deref for GraphicDisplay<'a, I> where I: DisplayInterface {
-    type Target = Display<I>;
+    type Target = Display<'a, I>;
 
-    fn deref(&self) -> &Display<I> {
+    fn deref(&self) -> &Display<'a, I> {
         &self.display
     }
 }
 
 impl<'a, I> DerefMut for GraphicDisplay<'a, I> where I: DisplayInterface {
-    fn deref_mut(&mut self) -> &mut Display<I> {
+    fn deref_mut(&mut self) -> &mut Display<'a, I> {
         &mut self.display
     }
 }

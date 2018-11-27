@@ -1,5 +1,6 @@
 use hal;
 
+use config::Config;
 use command::{BufCommand, Command, DataEntryMode, DeepSleepMode, IncrementAxis};
 use interface::DisplayInterface;
 
@@ -10,8 +11,6 @@ const MAX_GATE_OUTPUTS: usize = 296;
 // Magic numbers from the data sheet
 const ANALOG_BLOCK_CONTROL_MAGIC: u8 = 0x54;
 const DIGITAL_BLOCK_CONTROL_MAGIC: u8 = 0x3B;
-
-struct Config {}
 
 pub struct Dimensions {
     pub rows: u16,
@@ -32,16 +31,15 @@ impl Default for Rotation {
     }
 }
 
-pub struct Display<I> where I: DisplayInterface {
+pub struct Display<'a, I> where I: DisplayInterface {
     interface: I,
-    dimensions: Dimensions,
-    rotation: Rotation,
+    config: Config<'a>,
 }
 
-impl<I> Display<I> where I: DisplayInterface {
-    pub fn new(interface: I, dimensions: Dimensions, rotation: Rotation) -> Self {
+impl<'a, I> Display<'a, I> where I: DisplayInterface {
+    pub fn new(interface: I, config: Config<'a>) -> Self {
         // TODO: Assert dimensions are evenly divisible by 8
-        Self { interface, dimensions, rotation }
+        Self { interface, config }
     }
 
     /// Perform a hardware reset followed by software reset
@@ -50,34 +48,37 @@ impl<I> Display<I> where I: DisplayInterface {
         Command::SoftReset.execute(&mut self.interface)?;
         self.interface.busy_wait();
 
-        self.init(Config {})
+        self.init()
     }
 
     /// Initialise the controller according to Section 9: Typical Operating Sequence
     /// from the data sheet
-    fn init(&mut self, config: Config) -> Result<(), I::Error> {
+    fn init(&mut self) -> Result<(), I::Error> {
         Command::AnalogBlockControl(ANALOG_BLOCK_CONTROL_MAGIC).execute(&mut self.interface)?;
         Command::DigitalBlockControl(DIGITAL_BLOCK_CONTROL_MAGIC).execute(&mut self.interface)?;
 
-        Command::DriverOutputControl(self.dimensions.rows, 0x00).execute(&mut self.interface)?;
+        Command::DriverOutputControl(self.config.dimensions.rows, 0x00).execute(&mut self.interface)?;
 
-        Command::DummyLinePeriod(0x07).execute(&mut self.interface)?;
-        Command::GateLineWidth(0x04).execute(&mut self.interface)?;
+        self.config.dummy_line_period.execute(&mut self.interface)?;
+        self.config.gate_line_width.execute(&mut self.interface)?;
 
         // Command::GateDrivingVoltage(0b10000 | 0b0001);
         // Command::SourceDrivingVoltage(0x2D, 0xB2, 0x22).execute(&mut self.interface)?;
-        Command::WriteVCOM(0x3C).execute(&mut self.interface)?;
+        self.config.write_vcom.execute(&mut self.interface)?;
 
         // POR is HiZ. Need pull from config
         // Command::BorderWaveform(u8).execute(&mut self.interface)?;
 
-        BufCommand::WriteLUT(&LUT_RED).execute(&mut self.interface)?;
+        // BufCommand::WriteLUT(&LUT_RED).execute(&mut self.interface)?;
+        if let Some(ref write_lut) = self.config.write_lut {
+            write_lut.execute(&mut self.interface)?;
+        }
 
-        Command::DataEntryMode(DataEntryMode::IncrementYIncrementX, IncrementAxis::Horizontal).execute(&mut self.interface)?;
+        self.config.data_entry_mode.execute(&mut self.interface)?;
 
-        let end = self.dimensions.cols / 8 - 1;
+        let end = self.config.dimensions.cols / 8 - 1;
         Command::StartEndXPosition(0, end).execute(&mut self.interface)?;
-        Command::StartEndYPosition(0, self.dimensions.rows).execute(&mut self.interface)?;
+        Command::StartEndYPosition(0, self.config.dimensions.rows).execute(&mut self.interface)?;
 
         Ok(())
     }
@@ -112,15 +113,15 @@ impl<I> Display<I> where I: DisplayInterface {
     }
 
     pub fn rows(&self) -> u16 {
-        self.dimensions.rows
+        self.config.dimensions.rows
     }
 
     pub fn cols(&self) -> u8 {
-        self.dimensions.cols
+        self.config.dimensions.cols
     }
 
     pub fn rotation(&self) -> Rotation {
-        self.rotation
+        self.config.rotation
     }
 }
 
