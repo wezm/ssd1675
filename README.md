@@ -12,8 +12,8 @@ controller, for use with [embedded-hal].
 ## Description
 
 This driver is intended to work on embedded platforms using the `embedded-hal`
-trait library. It is `no_std` compatible, only uses safe Rust, and does not
-require an allocator. It supports the 4-wire SPI interface.
+trait library. It is `no_std` compatible, builds on stable Rust, and only uses
+safe Rust. It supports the 4-wire SPI interface.
 
 ## Tested Devices
 

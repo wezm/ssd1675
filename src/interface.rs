@@ -64,10 +64,9 @@ where
 
         Ok(())
     }
-
 }
 
-impl<SPI, CS, BUSY, DC, RESET> DisplayInterface for Interface<SPI, CS, BUSY, DC, RESET> 
+impl<SPI, CS, BUSY, DC, RESET> DisplayInterface for Interface<SPI, CS, BUSY, DC, RESET>
 where
     SPI: hal::blocking::spi::Write<u8>,
     CS: hal::digital::OutputPin,

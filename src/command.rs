@@ -4,7 +4,10 @@ use interface::DisplayInterface;
 const MAX_GATES: u16 = 296;
 const MAX_DUMMY_LINE_PERIOD: u8 = 127;
 
-trait Contains<C> where C: Copy + PartialOrd {
+trait Contains<C>
+where
+    C: Copy + PartialOrd,
+{
     fn contains(&self, item: C) -> bool;
 }
 
@@ -50,6 +53,7 @@ pub enum DeepSleepMode {
     DiscardRAM,
 }
 
+#[derive(Clone, Copy)]
 pub enum Command {
     /// Set the MUX of gate lines, scanning sequence and direction
     /// 0: MAX gate lines
@@ -172,7 +176,7 @@ fn u16_as_u8(val: u16) -> [u8; 2] {
     [(val & 0xFF00 >> 8) as u8, (val & 0xFF) as u8]
 }
 
-/// Populates data buffer (array) and returns a pair (tuple) with command and 
+/// Populates data buffer (array) and returns a pair (tuple) with command and
 /// appropriately sized slice into populated buffer.
 /// E.g.
 ///
@@ -207,21 +211,17 @@ macro_rules! pack {
 }
 
 impl Command {
-    pub(crate) fn execute<I: DisplayInterface>(self, interface: &mut I) -> Result<(), I::Error> {
+    pub(crate) fn execute<I: DisplayInterface>(&self, interface: &mut I) -> Result<(), I::Error> {
         use self::Command::*;
 
         let mut buf = [0u8; 4];
-        let (command, data) = match self {
+        let (command, data) = match *self {
             DriverOutputControl(gate_lines, scanning_seq_and_dir) => {
                 let [upper, lower] = u16_as_u8(gate_lines);
                 pack!(buf, 0x01, [lower, upper, scanning_seq_and_dir])
             }
-            GateDrivingVoltage(voltages) => {
-                pack!(buf, 0x03, [voltages])
-            }
-            SourceDrivingVoltage(vsh1, vsh2, vsl) => {
-                pack!(buf, 0x04, [vsh1, vsh2, vsl])
-            }
+            GateDrivingVoltage(voltages) => pack!(buf, 0x03, [voltages]),
+            SourceDrivingVoltage(vsh1, vsh2, vsl) => pack!(buf, 0x04, [vsh1, vsh2, vsl]),
             BoosterEnable(phase1, phase2, phase3, duration) => {
                 pack!(buf, 0x0C, [phase1, phase2, phase3, duration])
             }
@@ -253,9 +253,7 @@ impl Command {
 
                 pack!(buf, 0x11, [axis | mode])
             }
-            SoftReset => {
-                pack!(buf, 0x12, [])
-            }
+            SoftReset => pack!(buf, 0x12, []),
             // TemperatatSensorSelection(TemperatureSensor) => {
             // }
             // WriteTemperatureSensor(u16) => {
@@ -264,34 +262,22 @@ impl Command {
             // }
             // WriteExternalTemperatureSensor(u8, u8, u8) => {
             // }
-            UpdateDisplay => {
-                pack!(buf, 0x20, [])
-            }
+            UpdateDisplay => pack!(buf, 0x20, []),
             // UpdateDisplayOption1(RamOption, RamOption) => {
             // }
-            UpdateDisplayOption2(value) => {
-                pack!(buf, 0x22, [value])
-            }
+            UpdateDisplayOption2(value) => pack!(buf, 0x22, [value]),
             // EnterVCOMSensing => {
             // }
             // VCOMSenseDuration(u8) => {
             // }
-            WriteVCOM(value) => {
-                pack!(buf, 0x2C, [value])
-            }
+            WriteVCOM(value) => pack!(buf, 0x2C, [value]),
             DummyLinePeriod(period) => {
                 debug_assert!(Contains::contains(&(0..=MAX_DUMMY_LINE_PERIOD), period));
                 pack!(buf, 0x3A, [period])
             }
-            GateLineWidth(tgate) => {
-                pack!(buf, 0x3B, [tgate])
-            }
-            BorderWaveform(border_waveform) => {
-                pack!(buf, 0x3C, [border_waveform])
-            }
-            StartEndXPosition(start, end) => {
-                pack!(buf, 0x44, [start, end])
-            }
+            GateLineWidth(tgate) => pack!(buf, 0x3B, [tgate]),
+            BorderWaveform(border_waveform) => pack!(buf, 0x3C, [border_waveform]),
+            StartEndXPosition(start, end) => pack!(buf, 0x44, [start, end]),
             StartEndYPosition(start, end) => {
                 let [start_upper, start_lower] = u16_as_u8(start);
                 let [end_upper, end_lower] = u16_as_u8(end);
@@ -301,19 +287,11 @@ impl Command {
             // }
             // AutoWriteBlackPattern(u8) => {
             // }
-            XAddress(address) => {
-                pack!(buf, 0x4E, [address])
-            }
-            YAddress(address) => {
-                pack!(buf, 0x4F, [address])
-            }
-            AnalogBlockControl(value) => {
-                pack!(buf, 0x74, [value])
-            }
-            DigitalBlockControl(value) => {
-                pack!(buf, 0x7E, [value])
-            }
-            _ => unimplemented!()
+            XAddress(address) => pack!(buf, 0x4E, [address]),
+            YAddress(address) => pack!(buf, 0x4F, [address]),
+            AnalogBlockControl(value) => pack!(buf, 0x74, [value]),
+            DigitalBlockControl(value) => pack!(buf, 0x7E, [value]),
+            _ => unimplemented!(),
         };
 
         interface.send_command(command)?;
@@ -326,19 +304,13 @@ impl Command {
 }
 
 impl<'buf> BufCommand<'buf> {
-    pub(crate) fn execute<I: DisplayInterface>(self, interface: &mut I) -> Result<(), I::Error> {
+    pub(crate) fn execute<I: DisplayInterface>(&self, interface: &mut I) -> Result<(), I::Error> {
         use self::BufCommand::*;
 
         let (command, data) = match self {
-            WriteBlackData(buffer) => {
-                (0x24, buffer)
-            }
-            WriteRedData(buffer) => {
-                (0x26, buffer)
-            }
-            WriteLUT(buffer) => {
-                (0x32, buffer)
-            }
+            WriteBlackData(buffer) => (0x24, buffer),
+            WriteRedData(buffer) => (0x26, buffer),
+            WriteLUT(buffer) => (0x32, buffer),
         };
 
         interface.send_command(command)?;
@@ -350,13 +322,19 @@ impl<'buf> BufCommand<'buf> {
     }
 }
 
-impl<C> Contains<C> for core::ops::Range<C> where C: Copy + PartialOrd {
+impl<C> Contains<C> for core::ops::Range<C>
+where
+    C: Copy + PartialOrd,
+{
     fn contains(&self, item: C) -> bool {
         item >= self.start && item < self.end
     }
 }
 
-impl<C> Contains<C> for core::ops::RangeInclusive<C> where C: Copy + PartialOrd {
+impl<C> Contains<C> for core::ops::RangeInclusive<C>
+where
+    C: Copy + PartialOrd,
+{
     fn contains(&self, item: C) -> bool {
         item >= *self.start() && item <= *self.end()
     }

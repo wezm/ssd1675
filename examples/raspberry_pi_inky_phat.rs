@@ -5,7 +5,7 @@ use linux_embedded_hal::Delay;
 use linux_embedded_hal::{Pin, Spidev};
 
 extern crate ssd1675;
-use ssd1675::{Display, Dimensions, GraphicDisplay, Color, Rotation};
+use ssd1675::{Builder, Color, Dimensions, Display, GraphicDisplay, Rotation};
 
 // Graphics
 extern crate embedded_graphics;
@@ -15,12 +15,12 @@ use embedded_graphics::Drawing;
 
 // Font
 extern crate profont;
-use profont::{ProFont9Point, ProFont12Point, ProFont14Point, ProFont24Point};
+use profont::{ProFont12Point, ProFont14Point, ProFont24Point, ProFont9Point};
 
 use std::process::Command;
-use std::{fs, io};
-use std::time::Duration;
 use std::thread::sleep;
+use std::time::Duration;
+use std::{fs, io};
 
 // Activate SPI, GPIO in raspi-config needs to be run with sudo because of some sysfs_gpio
 // permission problems and follow-up timing problems
@@ -28,6 +28,27 @@ use std::thread::sleep;
 
 const ROWS: u16 = 212;
 const COLS: u8 = 104;
+
+#[rustfmt::skip]
+const LUT: [u8; 70] = [
+    // Phase 0     Phase 1     Phase 2     Phase 3     Phase 4     Phase 5     Phase 6
+    // A B C D     A B C D     A B C D     A B C D     A B C D     A B C D     A B C D
+    0b01001000, 0b10100000, 0b00010000, 0b00010000, 0b00010011, 0b00000000, 0b00000000,  // LUT0 - Black
+    0b01001000, 0b10100000, 0b10000000, 0b00000000, 0b00000011, 0b00000000, 0b00000000,  // LUTT1 - White
+    0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,  // IGNORE
+    0b01001000, 0b10100101, 0b00000000, 0b10111011, 0b00000000, 0b00000000, 0b00000000,  // LUT3 - Red
+    0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,  // LUT4 - VCOM
+
+    // Duration            |  Repeat
+    // A   B     C     D   |
+    64,   12,   32,   12,    6,   // 0 Flash
+    16,   8,    4,    4,     6,   // 1 clear
+    4,    8,    8,    16,    16,  // 2 bring in the black
+    2,    2,    2,    64,    32,  // 3 time for red
+    2,    2,    2,    2,     2,   // 4 final black sharpen phase
+    0,    0,    0,    0,     0,   // 5
+    0,    0,    0,    0,     0    // 6
+];
 
 fn main() -> Result<(), std::io::Error> {
     // Configure SPI
@@ -39,8 +60,8 @@ fn main() -> Result<(), std::io::Error> {
         .build();
     spi.configure(&options).expect("SPI configuration");
 
-    // https://pinout.xyz/pinout/inky_phat#
-    // Configure Digital I/O Pin to be used as Chip Select for SPI
+    // https://pinout.xyz/pinout/inky_phat
+    // Configure Digital I/O Pins
     let cs = Pin::new(8); // BCM8
     cs.export().expect("cs export");
     while !cs.is_exported() {}
@@ -61,20 +82,33 @@ fn main() -> Result<(), std::io::Error> {
     let reset = Pin::new(27); // BCM27
     reset.export().expect("reset export");
     while !reset.is_exported() {}
-    reset.set_direction(Direction::Out).expect("reset Direction");
+    reset
+        .set_direction(Direction::Out)
+        .expect("reset Direction");
     reset.set_value(1).expect("reset Value set to 1");
     println!("Pins configured");
 
+    // Initialise display controller
     let mut delay = Delay {};
 
     let controller = ssd1675::Interface::new(spi, cs, busy, dc, reset);
 
-    let dimensions = Dimensions { rows: ROWS, cols: COLS };
     let mut black_buffer = [0u8; ROWS as usize * COLS as usize / 8];
     let mut red_buffer = [0u8; ROWS as usize * COLS as usize / 8];
-    let display = Display::new(controller, dimensions, Rotation::Rotate270);
+    let config = Builder::new()
+        .dimensions(Dimensions {
+            rows: ROWS,
+            cols: COLS,
+        })
+        .rotation(Rotation::Rotate270)
+        .lut(&LUT)
+        .build()
+        .expect("invalid configuration");
+    let display = Display::new(controller, config);
     let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
 
+    // Main loop. Displays CPU temperature, uname, and uptime every minute with a red Raspberry Pi
+    // header.
     loop {
         display.reset(&mut delay).expect("error resetting display");
         println!("Reset and initialised");
@@ -147,21 +181,29 @@ fn read_cpu_temp() -> Result<f64, io::Error> {
 }
 
 fn read_uptime() -> Option<String> {
-    Command::new("uptime").arg("-p").output().ok().and_then(|output| {
-        if output.status.success() {
-            String::from_utf8(output.stdout).ok()
-        } else {
-            None
-        }
-    })
+    Command::new("uptime")
+        .arg("-p")
+        .output()
+        .ok()
+        .and_then(|output| {
+            if output.status.success() {
+                String::from_utf8(output.stdout).ok()
+            } else {
+                None
+            }
+        })
 }
 
 fn read_uname() -> Option<String> {
-    Command::new("uname").arg("-smr").output().ok().and_then(|output| {
-        if output.status.success() {
-            String::from_utf8(output.stdout).ok()
-        } else {
-            None
-        }
-    })
+    Command::new("uname")
+        .arg("-smr")
+        .output()
+        .ok()
+        .and_then(|output| {
+            if output.status.success() {
+                String::from_utf8(output.stdout).ok()
+            } else {
+                None
+            }
+        })
 }

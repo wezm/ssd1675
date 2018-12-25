@@ -1,22 +1,40 @@
-use hal;
 use color::Color;
-use display::{Display, Rotation};
-use interface::DisplayInterface;
 use core::ops::{Deref, DerefMut};
+use display::{Display, Rotation};
+use hal;
+use interface::DisplayInterface;
 
-pub struct GraphicDisplay<'a, I> where I: DisplayInterface {
-    display: Display<I>,
+pub struct GraphicDisplay<'a, I>
+where
+    I: DisplayInterface,
+{
+    display: Display<'a, I>,
     black_buffer: &'a mut [u8],
     red_buffer: &'a mut [u8],
 }
 
-impl<'a, I> GraphicDisplay<'a, I> where I: DisplayInterface {
-    pub fn new(display: Display<I>, black_buffer: &'a mut [u8], red_buffer: &'a mut [u8]) -> Self {
-        GraphicDisplay { display, black_buffer, red_buffer }
+impl<'a, I> GraphicDisplay<'a, I>
+where
+    I: DisplayInterface,
+{
+    pub fn new(
+        display: Display<'a, I>,
+        black_buffer: &'a mut [u8],
+        red_buffer: &'a mut [u8],
+    ) -> Self {
+        GraphicDisplay {
+            display,
+            black_buffer,
+            red_buffer,
+        }
     }
 
-    pub fn update<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D) -> Result<(), I::Error> {
-        self.display.update(self.black_buffer, self.red_buffer, delay)
+    pub fn update<D: hal::blocking::delay::DelayMs<u8>>(
+        &mut self,
+        delay: &mut D,
+    ) -> Result<(), I::Error> {
+        self.display
+            .update(self.black_buffer, self.red_buffer, delay)
     }
 
     pub fn clear(&mut self, color: Color) {
@@ -37,7 +55,13 @@ impl<'a, I> GraphicDisplay<'a, I> where I: DisplayInterface {
     }
 
     fn set_pixel(&mut self, x: u32, y: u32, color: Color) {
-        let (index, bit) = rotation(x, y, self.cols() as u32, self.rows() as u32, self.rotation());
+        let (index, bit) = rotation(
+            x,
+            y,
+            self.cols() as u32,
+            self.rows() as u32,
+            self.rotation(),
+        );
         let index = index as usize;
 
         match color {
@@ -57,38 +81,35 @@ impl<'a, I> GraphicDisplay<'a, I> where I: DisplayInterface {
     }
 }
 
-impl<'a, I> Deref for GraphicDisplay<'a, I> where I: DisplayInterface {
-    type Target = Display<I>;
+impl<'a, I> Deref for GraphicDisplay<'a, I>
+where
+    I: DisplayInterface,
+{
+    type Target = Display<'a, I>;
 
-    fn deref(&self) -> &Display<I> {
+    fn deref(&self) -> &Display<'a, I> {
         &self.display
     }
 }
 
-impl<'a, I> DerefMut for GraphicDisplay<'a, I> where I: DisplayInterface {
-    fn deref_mut(&mut self) -> &mut Display<I> {
+impl<'a, I> DerefMut for GraphicDisplay<'a, I>
+where
+    I: DisplayInterface,
+{
+    fn deref_mut(&mut self) -> &mut Display<'a, I> {
         &mut self.display
     }
 }
 
 fn rotation(x: u32, y: u32, width: u32, height: u32, rotation: Rotation) -> (u32, u8) {
     match rotation {
-        Rotation::Rotate0 => (
-            x / 8 + (width / 8) * y,
-            0x80 >> (x % 8),
-        ),
-        Rotation::Rotate90 => (
-            (width - 1 - y) / 8 + (width / 8) * x,
-            0x01 << (y % 8),
-        ),
+        Rotation::Rotate0 => (x / 8 + (width / 8) * y, 0x80 >> (x % 8)),
+        Rotation::Rotate90 => ((width - 1 - y) / 8 + (width / 8) * x, 0x01 << (y % 8)),
         Rotation::Rotate180 => (
             ((width / 8) * height - 1) - (x / 8 + (width / 8) * y),
             0x01 << (x % 8),
         ),
-        Rotation::Rotate270 => (
-            y / 8 + (height - 1 - x) * (width / 8),
-            0x80 >> (y % 8),
-        ),
+        Rotation::Rotate270 => (y / 8 + (height - 1 - x) * (width / 8), 0x80 >> (y % 8)),
     }
 }
 
@@ -112,7 +133,7 @@ fn outside_display(x: u32, y: u32, width: u32, height: u32, rotation: Rotation) 
 #[cfg(feature = "graphics")]
 extern crate embedded_graphics;
 #[cfg(feature = "graphics")]
-use self::embedded_graphics::{drawable::Pixel, Drawing, prelude::UnsignedCoord};
+use self::embedded_graphics::{drawable::Pixel, prelude::UnsignedCoord, Drawing};
 
 #[cfg(feature = "graphics")]
 impl<'a, I> Drawing<Color> for GraphicDisplay<'a, I>
@@ -124,7 +145,13 @@ where
         T: Iterator<Item = Pixel<Color>>,
     {
         for Pixel(UnsignedCoord(x, y), colour) in item_pixels {
-            if outside_display(x, y, self.cols() as u32, self.rows() as u32, self.rotation()) {
+            if outside_display(
+                x,
+                y,
+                self.cols() as u32,
+                self.rows() as u32,
+                self.rotation(),
+            ) {
                 continue;
             }
 
@@ -135,13 +162,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use ::{Display, DisplayInterface, Dimensions, GraphicDisplay, Color, Rotation};
     use self::embedded_graphics::coord::Coord;
     use self::embedded_graphics::fonts::{Font12x16, Font6x8};
     use self::embedded_graphics::prelude::*;
     use self::embedded_graphics::primitives::{Circle, Line, Rect};
     use self::embedded_graphics::Drawing;
+    use super::*;
+    use {Color, Dimensions, Display, DisplayInterface, GraphicDisplay, Rotation};
 
     const ROWS: u16 = 3;
     const COLS: u8 = 8;
@@ -191,15 +218,18 @@ mod tests {
     #[test]
     fn clear_white() {
         let interface = MockInterface::new();
-        let dimensions = Dimensions { rows: ROWS, cols: COLS };
+        let dimensions = Dimensions {
+            rows: ROWS,
+            cols: COLS,
+        };
         let mut black_buffer = [0u8; BUFFER_SIZE];
         let mut red_buffer = [0u8; BUFFER_SIZE];
 
         {
-        let display = Display::new(interface, dimensions, Rotation::Rotate270);
-        let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
+            let display = Display::new(interface, dimensions, Rotation::Rotate270);
+            let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
 
-        display.clear(Color::White);
+            display.clear(Color::White);
         }
 
         assert_eq!(black_buffer, [0xFF, 0xFF, 0xFF]);
@@ -209,15 +239,18 @@ mod tests {
     #[test]
     fn clear_black() {
         let interface = MockInterface::new();
-        let dimensions = Dimensions { rows: ROWS, cols: COLS };
+        let dimensions = Dimensions {
+            rows: ROWS,
+            cols: COLS,
+        };
         let mut black_buffer = [0u8; BUFFER_SIZE];
         let mut red_buffer = [0u8; BUFFER_SIZE];
 
         {
-        let display = Display::new(interface, dimensions, Rotation::Rotate270);
-        let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
+            let display = Display::new(interface, dimensions, Rotation::Rotate270);
+            let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
 
-        display.clear(Color::Black);
+            display.clear(Color::Black);
         }
 
         assert_eq!(black_buffer, [0x00, 0x00, 0x00]);
@@ -227,15 +260,18 @@ mod tests {
     #[test]
     fn clear_red() {
         let interface = MockInterface::new();
-        let dimensions = Dimensions { rows: ROWS, cols: COLS };
+        let dimensions = Dimensions {
+            rows: ROWS,
+            cols: COLS,
+        };
         let mut black_buffer = [0u8; BUFFER_SIZE];
         let mut red_buffer = [0u8; BUFFER_SIZE];
 
         {
-        let display = Display::new(interface, dimensions, Rotation::Rotate270);
-        let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
+            let display = Display::new(interface, dimensions, Rotation::Rotate270);
+            let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
 
-        display.clear(Color::Red);
+            display.clear(Color::Red);
         }
 
         assert_eq!(black_buffer, [0xFF, 0xFF, 0xFF]);
@@ -245,45 +281,50 @@ mod tests {
     #[test]
     fn draw_rect_white() {
         let interface = MockInterface::new();
-        let dimensions = Dimensions { rows: ROWS, cols: COLS };
+        let dimensions = Dimensions {
+            rows: ROWS,
+            cols: COLS,
+        };
         let mut black_buffer = [0u8; BUFFER_SIZE];
         let mut red_buffer = [0u8; BUFFER_SIZE];
 
         {
-        let display = Display::new(interface, dimensions, Rotation::Rotate0);
-        let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
+            let display = Display::new(interface, dimensions, Rotation::Rotate0);
+            let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
 
-        display.draw(Rect::new(Coord::new(0,0), Coord::new(2, 2)).with_stroke(Some(Color::White)).into_iter());
+            display.draw(
+                Rect::new(Coord::new(0, 0), Coord::new(2, 2))
+                    .with_stroke(Some(Color::White))
+                    .into_iter(),
+            );
         }
 
-        assert_eq!(black_buffer, [
-                   0b11100000,
-                   0b10100000,
-                   0b11100000]);
+        assert_eq!(black_buffer, [0b11100000, 0b10100000, 0b11100000]);
         assert_eq!(red_buffer, [0b00000000, 0b00000000, 0b00000000]);
     }
 
     #[test]
     fn draw_rect_red() {
         let interface = MockInterface::new();
-        let dimensions = Dimensions { rows: ROWS, cols: COLS };
+        let dimensions = Dimensions {
+            rows: ROWS,
+            cols: COLS,
+        };
         let mut black_buffer = [0u8; BUFFER_SIZE];
         let mut red_buffer = [0u8; BUFFER_SIZE];
 
         {
-        let display = Display::new(interface, dimensions, Rotation::Rotate0);
-        let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
+            let display = Display::new(interface, dimensions, Rotation::Rotate0);
+            let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
 
-        display.draw(Rect::new(Coord::new(1,0), Coord::new(3, 2)).with_stroke(Some(Color::Red)).into_iter());
+            display.draw(
+                Rect::new(Coord::new(1, 0), Coord::new(3, 2))
+                    .with_stroke(Some(Color::Red))
+                    .into_iter(),
+            );
         }
 
-        assert_eq!(black_buffer, [
-                   0b01110000,
-                   0b01010000,
-                   0b01110000]);
-        assert_eq!(red_buffer, [
-                   0b01110000,
-                   0b01010000,
-                   0b01110000]);
+        assert_eq!(black_buffer, [0b01110000, 0b01010000, 0b01110000]);
+        assert_eq!(red_buffer, [0b01110000, 0b01010000, 0b01110000]);
     }
 }
