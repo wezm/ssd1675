@@ -101,7 +101,7 @@ impl<'a, I> Display<'a, I> where I: DisplayInterface {
         delay.delay_ms(50);
         // TODO: We don't really need to wait here... the program can go off and do other things
         // and only busy wait if it wants to talk to the display again. Could possibly treat
-        // the interface like a smart pointer in which "acquiring" it would wait until it's not
+        // the interface like a smart pointer in which deref would wait until it's not
         // busy.
         self.interface.busy_wait();
 
