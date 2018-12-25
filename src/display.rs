@@ -1,7 +1,7 @@
 use hal;
 
-use config::Config;
 use command::{BufCommand, Command, DataEntryMode, DeepSleepMode, IncrementAxis};
+use config::Config;
 use interface::DisplayInterface;
 
 // Max display resolution is 160x296
@@ -31,19 +31,28 @@ impl Default for Rotation {
     }
 }
 
-pub struct Display<'a, I> where I: DisplayInterface {
+pub struct Display<'a, I>
+where
+    I: DisplayInterface,
+{
     interface: I,
     config: Config<'a>,
 }
 
-impl<'a, I> Display<'a, I> where I: DisplayInterface {
+impl<'a, I> Display<'a, I>
+where
+    I: DisplayInterface,
+{
     pub fn new(interface: I, config: Config<'a>) -> Self {
         // TODO: Assert dimensions are evenly divisible by 8
         Self { interface, config }
     }
 
     /// Perform a hardware reset followed by software reset
-    pub fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D) -> Result<(), I::Error> {
+    pub fn reset<D: hal::blocking::delay::DelayMs<u8>>(
+        &mut self,
+        delay: &mut D,
+    ) -> Result<(), I::Error> {
         self.interface.reset(delay);
         Command::SoftReset.execute(&mut self.interface)?;
         self.interface.busy_wait();
@@ -57,7 +66,8 @@ impl<'a, I> Display<'a, I> where I: DisplayInterface {
         Command::AnalogBlockControl(ANALOG_BLOCK_CONTROL_MAGIC).execute(&mut self.interface)?;
         Command::DigitalBlockControl(DIGITAL_BLOCK_CONTROL_MAGIC).execute(&mut self.interface)?;
 
-        Command::DriverOutputControl(self.config.dimensions.rows, 0x00).execute(&mut self.interface)?;
+        Command::DriverOutputControl(self.config.dimensions.rows, 0x00)
+            .execute(&mut self.interface)?;
 
         self.config.dummy_line_period.execute(&mut self.interface)?;
         self.config.gate_line_width.execute(&mut self.interface)?;
@@ -83,7 +93,12 @@ impl<'a, I> Display<'a, I> where I: DisplayInterface {
         Ok(())
     }
 
-    pub fn update<D: hal::blocking::delay::DelayMs<u8>>(&mut self, black: &[u8], red: &[u8], delay: &mut D) -> Result<(), I::Error> {
+    pub fn update<D: hal::blocking::delay::DelayMs<u8>>(
+        &mut self,
+        black: &[u8],
+        red: &[u8],
+        delay: &mut D,
+    ) -> Result<(), I::Error> {
         // Write the B/W RAM
         let buf_limit = ((self.rows() * self.cols() as u16) as f32 / 8.).ceil() as usize;
         Command::XAddress(0).execute(&mut self.interface)?;
@@ -124,23 +139,3 @@ impl<'a, I> Display<'a, I> where I: DisplayInterface {
         self.config.rotation
     }
 }
-
-const LUT_RED: [u8; 70] = [
-    // Phase 0     Phase 1     Phase 2     Phase 3     Phase 4     Phase 5     Phase 6
-    // A B C D     A B C D     A B C D     A B C D     A B C D     A B C D     A B C D
-    0b01001000, 0b10100000, 0b00010000, 0b00010000, 0b00010011, 0b00000000, 0b00000000,  // LUT0 - Black
-    0b01001000, 0b10100000, 0b10000000, 0b00000000, 0b00000011, 0b00000000, 0b00000000,  // LUTT1 - White
-    0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,  // IGNORE
-    0b01001000, 0b10100101, 0b00000000, 0b10111011, 0b00000000, 0b00000000, 0b00000000,  // LUT3 - Red
-    0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,  // LUT4 - VCOM
-
-    // Duration            |  Repeat
-    // A   B     C     D   |
-    64,   12,   32,   12,    6,   // 0 Flash
-    16,   8,    4,    4,     6,   // 1 clear
-    4,    8,    8,    16,    16,  // 2 bring in the black
-    2,    2,    2,    64,    32,  // 3 time for red
-    2,    2,    2,    2,     2,   // 4 final black sharpen phase
-    0,    0,    0,    0,     0,   // 5
-    0,    0,    0,    0,     0    // 6
-];

@@ -13,9 +13,9 @@ mod display;
 mod graphics;
 mod interface;
 
-pub use interface::DisplayInterface;
-pub use interface::Interface;
-pub use display::{Display, Dimensions, Rotation};
-pub use graphics::GraphicDisplay;
 pub use color::Color;
 pub use config::Builder;
+pub use display::{Dimensions, Display, Rotation};
+pub use graphics::GraphicDisplay;
+pub use interface::DisplayInterface;
+pub use interface::Interface;

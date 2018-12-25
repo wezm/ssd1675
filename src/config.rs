@@ -8,9 +8,10 @@ pub struct Builder<'a> {
     write_lut: Option<BufCommand<'a>>,
     data_entry_mode: Command,
     dimensions: Option<Dimensions>,
-    rotation: Rotation
+    rotation: Rotation,
 }
 
+#[derive(Debug)]
 pub struct BuilderError {}
 
 pub struct Config<'a> {
@@ -20,7 +21,7 @@ pub struct Config<'a> {
     pub(crate) write_lut: Option<BufCommand<'a>>,
     pub(crate) data_entry_mode: Command,
     pub(crate) dimensions: Dimensions,
-    pub(crate) rotation: Rotation
+    pub(crate) rotation: Rotation,
 }
 
 impl<'a> Default for Builder<'a> {
@@ -30,7 +31,10 @@ impl<'a> Default for Builder<'a> {
             gate_line_width: Command::GateLineWidth(0x04),
             write_vcom: Command::WriteVCOM(0x3C),
             write_lut: None,
-            data_entry_mode: Command::DataEntryMode(DataEntryMode::IncrementYIncrementX, IncrementAxis::Horizontal),
+            data_entry_mode: Command::DataEntryMode(
+                DataEntryMode::IncrementYIncrementX,
+                IncrementAxis::Horizontal,
+            ),
             dimensions: None,
             rotation: Rotation::default(),
         }
@@ -70,7 +74,11 @@ impl<'a> Builder<'a> {
         }
     }
 
-    pub fn data_entry_mode(self, data_entry_mode: DataEntryMode, increment_axis: IncrementAxis) -> Self {
+    pub fn data_entry_mode(
+        self,
+        data_entry_mode: DataEntryMode,
+        increment_axis: IncrementAxis,
+    ) -> Self {
         Self {
             data_entry_mode: Command::DataEntryMode(data_entry_mode, increment_axis),
             ..self
@@ -85,10 +93,7 @@ impl<'a> Builder<'a> {
     }
 
     pub fn rotation(self, rotation: Rotation) -> Self {
-        Self {
-            rotation,
-            ..self
-        }
+        Self { rotation, ..self }
     }
 
     pub fn build(self) -> Result<Config<'a>, BuilderError> {

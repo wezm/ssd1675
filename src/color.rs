@@ -18,7 +18,7 @@ impl From<u8> for Color {
             0 => Color::Black,
             1 => Color::White,
             2 => Color::Red,
-            _ => panic!("invalid color value")
+            _ => panic!("invalid color value"),
         }
     }
 }
