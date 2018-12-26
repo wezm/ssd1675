@@ -5,12 +5,23 @@ const RESET_DELAY_MS: u8 = 10;
 
 const MAX_SPI_SPEED_HZ: u32 = 20_000_000;
 
+/// Trait implemented by displays to provide implemenation of core functionality.
 pub trait DisplayInterface {
     type Error;
 
+    /// Send a command to the controller.
+    ///
+    /// Prefer calling `execute` on a [Commmand](../command/enum.Command.html) over calling this
+    /// directly.
     fn send_command(&mut self, command: u8) -> Result<(), Self::Error>;
+
+    /// Send data for a command.
     fn send_data(&mut self, data: &[u8]) -> Result<(), Self::Error>;
+
+    /// Reset the controller.
     fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D);
+
+    /// Wait for the controller to indicate it is not busy.
     fn busy_wait(&self);
 }
 

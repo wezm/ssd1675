@@ -36,6 +36,9 @@ pub struct Builder<'a> {
 #[derive(Debug)]
 pub struct BuilderError {}
 
+/// Display configuration.
+///
+/// Passed to Display::new. Use `Builder` to construct a `Config`.
 pub struct Config<'a> {
     pub(crate) dummy_line_period: Command,
     pub(crate) gate_line_width: Command,
