@@ -2,6 +2,19 @@
 name = "ssd1675"
 version = "0.1.0"
 authors = ["Wesley Moore <wes@wezm.net>"]
+description = "Driver for the SSD1675 e-Paper display (EPD) controller, for use with embedded-hal"
+
+documentation = "https://docs.rs/ssd1675"
+repository = "https://github.com/wezm/ssd1675"
+
+readme = "README.md"
+keywords = ["embedded", "epd", "epaper", "display", "ssd1675"]
+categories = ["embedded", "no-std"]
+
+license = "MIT OR Apache-2.0"
+
+[badges]
+travis-ci = { repository = "wezm/ssd1675" }
 
 [dependencies]
 libm = "0.1.2"
