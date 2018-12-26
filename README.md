@@ -26,7 +26,20 @@ The library has been tested and confirmed working on these devices:
 
     cargo build --release --examples --features examples
 
-* [Raspberry Pi Inky pHAT example](https://github.com/wezm/ssd1675/blob/master/examples/raspberry_pi_inky_phat.rs).
+### Raspberry Pi with Inky pHAT
+
+The [Raspberry Pi Inky pHAT
+example](https://github.com/wezm/ssd1675/blob/master/examples/raspberry_pi_inky_phat.rs),
+shows how to display information on an [Inky pHAT] using this crate. The photo
+at the top of the page shows this example in action. To avoid the need to
+compile on the Raspberry Pi itself I recommend cross-compiling with the [cross]
+tool. With `cross` installed build the example as follows:
+
+    cross build --target=arm-unknown-linux-gnueabi --release --example raspberry_pi_inky_phat --features examples
+
+After it is built copy
+`target/arm-unknown-linux-gnueabi/release/examples/raspberry_pi_inky_phat` to
+the Raspberry Pi.
 
 ## Credits
 
@@ -43,9 +56,10 @@ The library has been tested and confirmed working on these devices:
   http://www.apache.org/licenses/LICENSE-2.0)
 - MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
-[SSD1675]: http://www.solomon-systech.com/en/product/advanced-display/bistable-display-driver-ic/SSD1675/
-[embedded-hal]: https://crates.io/crates/embedded-hal
-[Inky pHat]: https://shop.pimoroni.com/products/inky-phat
 [crate-docs]: https://docs.rs/ssd1675
-[LICENSE-MIT]: https://github.com/wezm/ssd1675/blob/master/LICENSE-MIT
+[cross]: https://github.com/rust-embedded/cross
+[embedded-hal]: https://crates.io/crates/embedded-hal
+[Inky pHAT]: https://shop.pimoroni.com/products/inky-phat
 [LICENSE-APACHE]: https://github.com/wezm/ssd1675/blob/master/LICENSE-APACHE
+[LICENSE-MIT]: https://github.com/wezm/ssd1675/blob/master/LICENSE-MIT
+[SSD1675]: http://www.solomon-systech.com/en/product/advanced-display/bistable-display-driver-ic/SSD1675/
