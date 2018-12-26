@@ -125,7 +125,7 @@ pub enum Command {
     // WriteDisplayOption,
     // WriteUserId,
     // OTPProgramMode,
-    /// Set the number dummy line period in terms of gate line width (TGate)
+    /// Set the number of dummy line period in terms of gate line width (TGate)
     DummyLinePeriod(u8),
     /// Set the gate line width (TGate)
     GateLineWidth(u8),

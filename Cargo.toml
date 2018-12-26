@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Wesley Moore <wes@wezm.net>"]
 
 [dependencies]
+libm = "0.1.2"
 
 [dependencies.embedded-hal]
 features = ["unproven"]
@@ -13,10 +14,19 @@ version = "0.2.2"
 optional = true
 version = "0.4.4"
 
-[dev-dependencies]
-linux-embedded-hal = "0.2.1" # for examples
-profont = "0.1"
+[dependencies.linux-embedded-hal]
+optional = true
+version = "0.2.1"
+
+[dependencies.profont]
+optional = true
+version = "0.1"
 
 [features]
 default = ["graphics"]
 graphics = ["embedded-graphics"]
+examples = ["linux-embedded-hal", "profont"]
+
+[[example]]
+name = "raspberry_pi_inky_phat"
+required-features = ["examples"]
