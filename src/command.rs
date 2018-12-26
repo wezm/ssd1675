@@ -53,6 +53,7 @@ pub enum DeepSleepMode {
     DiscardRAM,
 }
 
+/// A command that can be issued to the controller.
 #[derive(Clone, Copy)]
 pub enum Command {
     /// Set the MUX of gate lines, scanning sequence and direction
@@ -125,7 +126,7 @@ pub enum Command {
     // WriteDisplayOption,
     // WriteUserId,
     // OTPProgramMode,
-    /// Set the number dummy line period in terms of gate line width (TGate)
+    /// Set the number of dummy line period in terms of gate line width (TGate)
     DummyLinePeriod(u8),
     /// Set the gate line width (TGate)
     GateLineWidth(u8),
@@ -211,7 +212,8 @@ macro_rules! pack {
 }
 
 impl Command {
-    pub(crate) fn execute<I: DisplayInterface>(&self, interface: &mut I) -> Result<(), I::Error> {
+    /// Execute the command, transmitting any associated data as well.
+    pub fn execute<I: DisplayInterface>(&self, interface: &mut I) -> Result<(), I::Error> {
         use self::Command::*;
 
         let mut buf = [0u8; 4];
@@ -304,7 +306,8 @@ impl Command {
 }
 
 impl<'buf> BufCommand<'buf> {
-    pub(crate) fn execute<I: DisplayInterface>(&self, interface: &mut I) -> Result<(), I::Error> {
+    /// Execute the command, transmitting the associated buffer as well.
+    pub fn execute<I: DisplayInterface>(&self, interface: &mut I) -> Result<(), I::Error> {
         use self::BufCommand::*;
 
         let (command, data) = match self {

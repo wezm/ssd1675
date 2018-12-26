@@ -1,3 +1,4 @@
+/// Represents the state of a pixel in the display
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Color {
     Black,

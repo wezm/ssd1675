@@ -4,6 +4,11 @@ use display::{Display, Rotation};
 use hal;
 use interface::DisplayInterface;
 
+/// A display that holds buffers for drawing into and updating the display from.
+///
+/// When the `graphics` feature is enabled `GraphicDisplay` implements the `Draw` trait from
+/// [embedded-graphics](https://crates.io/crates/embedded-graphics). This allows basic shapes and
+/// text to be drawn on the display.
 pub struct GraphicDisplay<'a, I>
 where
     I: DisplayInterface,
@@ -17,6 +22,10 @@ impl<'a, I> GraphicDisplay<'a, I>
 where
     I: DisplayInterface,
 {
+    /// Promote a `Display` to a `GraphicDisplay`.
+    ///
+    /// B/W and Red buffers for drawing into must be supplied. These should be `rows` * `cols` in
+    /// length.
     pub fn new(
         display: Display<'a, I>,
         black_buffer: &'a mut [u8],
@@ -29,6 +38,7 @@ where
         }
     }
 
+    /// Update the display by writing the buffers to the controller.
     pub fn update<D: hal::blocking::delay::DelayMs<u8>>(
         &mut self,
         delay: &mut D,
@@ -37,6 +47,7 @@ where
             .update(self.black_buffer, self.red_buffer, delay)
     }
 
+    /// Clear the buffers, filling them a single color.
     pub fn clear(&mut self, color: Color) {
         let (black, red) = match color {
             Color::White => (0xFF, 0x00),
