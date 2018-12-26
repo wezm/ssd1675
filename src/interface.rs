@@ -3,8 +3,6 @@ use hal;
 // Section 15.2 of the HINK-E0213A07 data sheet says to hold for 10ms
 const RESET_DELAY_MS: u8 = 10;
 
-const MAX_SPI_SPEED_HZ: u32 = 20_000_000;
-
 /// Trait implemented by displays to provide implemenation of core functionality.
 pub trait DisplayInterface {
     type Error;
@@ -80,6 +78,8 @@ pub trait DisplayInterface {
 ///
 /// // Build the interface from the pins and SPI device
 /// let controller = ssd1675::Interface::new(spi, cs, busy, dc, reset);
+
+#[allow(dead_code)] // Prevent warning about CS being unused
 pub struct Interface<SPI, CS, BUSY, DC, RESET> {
     /// SPI interface
     spi: SPI,
