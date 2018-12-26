@@ -3,6 +3,7 @@
 Rust driver for the [Solomon Systech SSD1675][SSD1675] e-Paper display (EPD)
 controller, for use with [embedded-hal].
 
+[![Build Status](https://travis-ci.org/wezm/ssd1675.svg?branch=master)](https://travis-ci.org/wezm/ssd1675)
 [![crates.io](https://img.shields.io/crates/v/ssd1675.svg)](https://crates.io/crates/ssd1675)
 [![Documentation](https://docs.rs/ssd1675/badge.svg)][crate-docs]
 
