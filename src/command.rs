@@ -66,6 +66,9 @@ pub enum Command {
     /// 0: VSH1
     /// 1: VSH2
     /// 2: VSL
+    SourceDrivingVoltageYellow(u8),
+    /// Booster enable with phase 1
+    /// 0: Soft start setting for phase 1
     SourceDrivingVoltage(u8, u8, u8),
     /// Booster enable with phases 1 to 3 for soft start current and duration setting
     /// 0: Soft start setting for phase 1
@@ -100,7 +103,7 @@ pub enum Command {
     UpdateDisplay,
     /// Set RAM content options for update display command.
     /// 0: Black/White RAM option
-    /// 1: Red RAM option
+    /// 1: Red/Yellow RAM option
     UpdateDisplayOption1(RamOption, RamOption),
     /// Set display update sequence options
     UpdateDisplayOption2(u8),
@@ -141,9 +144,9 @@ pub enum Command {
     /// 0: Start
     /// 1: End
     StartEndYPosition(u16, u16),
-    /// Auto write red RAM for regular pattern
-    AutoWriteRedPattern(u8),
-    /// Auto write red RAM for regular pattern
+    /// Auto write red/yellow RAM for regular pattern
+    AutoWriteRedOrYellowPattern(u8),
+    /// Auto write black RAM for regular pattern
     AutoWriteBlackPattern(u8),
     /// Set RAM X address
     XAddress(u8),
@@ -165,10 +168,10 @@ pub enum BufCommand<'buf> {
     /// 1 = White
     /// 0 = Black
     WriteBlackData(&'buf [u8]),
-    /// Write to red RAM
-    /// 1 = Red
+    /// Write to red/yellow RAM
+    /// 1 = Red or Yellow
     /// 0 = Use contents of black/white RAM
-    WriteRedData(&'buf [u8]),
+    WriteRedOrYellowData(&'buf [u8]),
     /// Write LUT register (70 bytes)
     WriteLUT(&'buf [u8]),
 }
@@ -223,6 +226,7 @@ impl Command {
                 pack!(buf, 0x01, [lower, upper, scanning_seq_and_dir])
             }
             GateDrivingVoltage(voltages) => pack!(buf, 0x03, [voltages]),
+            SourceDrivingVoltageYellow(vsh) => pack!(buf, 0x04, [vsh]),
             SourceDrivingVoltage(vsh1, vsh2, vsl) => pack!(buf, 0x04, [vsh1, vsh2, vsl]),
             BoosterEnable(phase1, phase2, phase3, duration) => {
                 pack!(buf, 0x0C, [phase1, phase2, phase3, duration])
@@ -312,7 +316,7 @@ impl<'buf> BufCommand<'buf> {
 
         let (command, data) = match self {
             WriteBlackData(buffer) => (0x24, buffer),
-            WriteRedData(buffer) => (0x26, buffer),
+            WriteRedOrYellowData(buffer) => (0x26, buffer),
             WriteLUT(buffer) => (0x32, buffer),
         };
 

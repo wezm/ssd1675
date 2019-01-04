@@ -15,7 +15,7 @@ where
 {
     display: Display<'a, I>,
     black_buffer: &'a mut [u8],
-    red_buffer: &'a mut [u8],
+    color_buffer: &'a mut [u8],
 }
 
 impl<'a, I> GraphicDisplay<'a, I>
@@ -29,12 +29,12 @@ where
     pub fn new(
         display: Display<'a, I>,
         black_buffer: &'a mut [u8],
-        red_buffer: &'a mut [u8],
+        color_buffer: &'a mut [u8],
     ) -> Self {
         GraphicDisplay {
             display,
             black_buffer,
-            red_buffer,
+            color_buffer,
         }
     }
 
@@ -44,15 +44,15 @@ where
         delay: &mut D,
     ) -> Result<(), I::Error> {
         self.display
-            .update(self.black_buffer, self.red_buffer, delay)
+            .update(self.black_buffer, self.color_buffer, delay)
     }
 
     /// Clear the buffers, filling them a single color.
     pub fn clear(&mut self, color: Color) {
-        let (black, red) = match color {
+        let (black, color) = match color {
             Color::White => (0xFF, 0x00),
             Color::Black => (0x00, 0x00),
-            Color::Red => (0xFF, 0xFF),
+            Color::RedOrYellow => (0xFF, 0xFF),
         };
 
         for byte in &mut self.black_buffer.iter_mut() {
@@ -60,8 +60,8 @@ where
         }
 
         // TODO: Combine loops
-        for byte in &mut self.red_buffer.iter_mut() {
-            *byte = red; // background_color.get_byte_value();
+        for byte in &mut self.color_buffer.iter_mut() {
+            *byte = color; // background_color.get_byte_value();
         }
     }
 
@@ -78,15 +78,15 @@ where
         match color {
             Color::Black => {
                 self.black_buffer[index] &= !bit;
-                self.red_buffer[index] &= !bit;
+                self.color_buffer[index] &= !bit;
             }
             Color::White => {
                 self.black_buffer[index] |= bit;
-                self.red_buffer[index] &= !bit;
+                self.color_buffer[index] &= !bit;
             }
-            Color::Red => {
+            Color::RedOrYellow => {
                 self.black_buffer[index] |= bit;
-                self.red_buffer[index] |= bit;
+                self.color_buffer[index] |= bit;
             }
         }
     }
@@ -227,56 +227,56 @@ mod tests {
     #[test]
     fn clear_white() {
         let mut black_buffer = [0u8; BUFFER_SIZE];
-        let mut red_buffer = [0u8; BUFFER_SIZE];
+        let mut color_buffer = [0u8; BUFFER_SIZE];
 
         {
             let mut display =
-                GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut red_buffer);
+                GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut color_buffer);
             display.clear(Color::White);
         }
 
         assert_eq!(black_buffer, [0xFF, 0xFF, 0xFF]);
-        assert_eq!(red_buffer, [0x00, 0x00, 0x00]);
+        assert_eq!(color_buffer, [0x00, 0x00, 0x00]);
     }
 
     #[test]
     fn clear_black() {
         let mut black_buffer = [0u8; BUFFER_SIZE];
-        let mut red_buffer = [0u8; BUFFER_SIZE];
+        let mut color_buffer = [0u8; BUFFER_SIZE];
 
         {
             let mut display =
-                GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut red_buffer);
+                GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut color_buffer);
             display.clear(Color::Black);
         }
 
         assert_eq!(black_buffer, [0x00, 0x00, 0x00]);
-        assert_eq!(red_buffer, [0x00, 0x00, 0x00]);
+        assert_eq!(color_buffer, [0x00, 0x00, 0x00]);
     }
 
     #[test]
-    fn clear_red() {
+    fn clear_color() {
         let mut black_buffer = [0u8; BUFFER_SIZE];
-        let mut red_buffer = [0u8; BUFFER_SIZE];
+        let mut color_buffer = [0u8; BUFFER_SIZE];
 
         {
             let mut display =
-                GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut red_buffer);
-            display.clear(Color::Red);
+                GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut color_buffer);
+            display.clear(Color::RedOrYellow);
         }
 
         assert_eq!(black_buffer, [0xFF, 0xFF, 0xFF]);
-        assert_eq!(red_buffer, [0xFF, 0xFF, 0xFF]);
+        assert_eq!(color_buffer, [0xFF, 0xFF, 0xFF]);
     }
 
     #[test]
     fn draw_rect_white() {
         let mut black_buffer = [0u8; BUFFER_SIZE];
-        let mut red_buffer = [0u8; BUFFER_SIZE];
+        let mut color_buffer = [0u8; BUFFER_SIZE];
 
         {
             let mut display =
-                GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut red_buffer);
+                GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut color_buffer);
 
             display.draw(
                 Rect::new(Coord::new(0, 0), Coord::new(2, 2))
@@ -291,23 +291,23 @@ mod tests {
                                   0b11100000]);
 
         #[rustfmt::skip]
-        assert_eq!(red_buffer,   [0b00000000,
+        assert_eq!(color_buffer,   [0b00000000,
                                   0b00000000,
                                   0b00000000]);
     }
 
     #[test]
-    fn draw_rect_red() {
+    fn draw_rect_color() {
         let mut black_buffer = [0u8; BUFFER_SIZE];
-        let mut red_buffer = [0u8; BUFFER_SIZE];
+        let mut color_buffer = [0u8; BUFFER_SIZE];
 
         {
             let mut display =
-                GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut red_buffer);
+                GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut color_buffer);
 
             display.draw(
                 Rect::new(Coord::new(0, 0), Coord::new(2, 2))
-                    .with_stroke(Some(Color::Red))
+                    .with_stroke(Some(Color::RedOrYellow))
                     .into_iter(),
             );
         }
@@ -318,7 +318,7 @@ mod tests {
                                   0b11100000]);
 
         #[rustfmt::skip]
-        assert_eq!(red_buffer,   [0b11100000,
+        assert_eq!(color_buffer,   [0b11100000,
                                   0b10100000,
                                   0b11100000]);
     }

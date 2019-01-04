@@ -30,7 +30,7 @@ const ROWS: u16 = 212;
 const COLS: u8 = 104;
 
 #[rustfmt::skip]
-const LUT: [u8; 70] = [
+const LUT_RED: [u8; 70] = [
     // Phase 0     Phase 1     Phase 2     Phase 3     Phase 4     Phase 5     Phase 6
     // A B C D     A B C D     A B C D     A B C D     A B C D     A B C D     A B C D
     0b01001000, 0b10100000, 0b00010000, 0b00010000, 0b00010011, 0b00000000, 0b00000000,  // LUT0 - Black
@@ -50,7 +50,32 @@ const LUT: [u8; 70] = [
     0,    0,    0,    0,     0    // 6
 ];
 
+#[rustfmt::skip]
+const LUT_YELLOW: [u8; 70] = [
+    // Phase 0     Phase 1     Phase 2     Phase 3     Phase 4     Phase 5     Phase 6
+    // A B C D     A B C D     A B C D     A B C D     A B C D     A B C D     A B C D
+    0b11111010, 0b10010100, 0b10001100, 0b11000000, 0b11010000,  0b00000000, 0b00000000,  // LUT0 - Black
+    0b11111010, 0b10010100, 0b00101100, 0b10000000, 0b11100000,  0b00000000, 0b00000000,  // LUTT1 - White
+    0b11111010, 0b00000000, 0b00000000, 0b00000000, 0b00000000,  0b00000000, 0b00000000,  // IGNORE
+    0b11111010, 0b10010100, 0b11111000, 0b10000000, 0b01010000,  0b00000000, 0b11001100,  // LUT3 - Yellow (or Red)
+    0b10111111, 0b01011000, 0b11111100, 0b10000000, 0b11010000,  0b00000000, 0b00010001,  // LUT4 - VCOM
+
+    // Duration            | Repeat
+    // A   B     C     D   |
+    64,   16,   64,   16,   8,
+    8,    16,   4,    4,    16,
+    8,    8,    3,    8,    32,
+    8,    4,    0,    0,    16,
+    16,   8,    8,    0,    32,
+    0,    0,    0,    0,    0,
+    0,    0,    0,    0,    0,
+]
+];
+
 fn main() -> Result<(), std::io::Error> {
+    let yellow = std::env::args().count > 1 && std::env::args().get(1) == Some("yellow");
+    let LUT = yellow ? LUT_YELLOW : LUT_RED;
+
     // Configure SPI
     let mut spi = Spidev::open("/dev/spidev0.0").expect("SPI device");
     let options = SpidevOptions::new()
@@ -94,7 +119,7 @@ fn main() -> Result<(), std::io::Error> {
     let controller = ssd1675::Interface::new(spi, cs, busy, dc, reset);
 
     let mut black_buffer = [0u8; ROWS as usize * COLS as usize / 8];
-    let mut red_buffer = [0u8; ROWS as usize * COLS as usize / 8];
+    let mut color_buffer = [0u8; ROWS as usize * COLS as usize / 8];
     let config = Builder::new()
         .dimensions(Dimensions {
             rows: ROWS,
@@ -102,10 +127,11 @@ fn main() -> Result<(), std::io::Error> {
         })
         .rotation(Rotation::Rotate270)
         .lut(&LUT)
+        .yellow(yellow)
         .build()
         .expect("invalid configuration");
     let display = Display::new(controller, config);
-    let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut red_buffer);
+    let mut display = GraphicDisplay::new(display, &mut black_buffer, &mut color_buffer);
 
     // Main loop. Displays CPU temperature, uname, and uptime every minute with a red Raspberry Pi
     // header.
@@ -119,7 +145,7 @@ fn main() -> Result<(), std::io::Error> {
 
         display.draw(
             ProFont24Point::render_str("Raspberry Pi")
-                .with_stroke(Some(Color::Red))
+                .with_stroke(Some(Color::RedOrYellow))
                 .with_fill(Some(Color::White))
                 .translate(Coord::new(1, -4))
                 .into_iter(),

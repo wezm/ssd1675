@@ -25,6 +25,7 @@ pub struct Builder<'a> {
     gate_line_width: Command,
     write_vcom: Command,
     write_lut: Option<BufCommand<'a>>,
+    write_color: Option<Command>,
     data_entry_mode: Command,
     dimensions: Option<Dimensions>,
     rotation: Rotation,
@@ -43,6 +44,7 @@ pub struct Config<'a> {
     pub(crate) dummy_line_period: Command,
     pub(crate) gate_line_width: Command,
     pub(crate) write_vcom: Command,
+    pub(crate) write_color: Option<Command>,
     pub(crate) write_lut: Option<BufCommand<'a>>,
     pub(crate) data_entry_mode: Command,
     pub(crate) dimensions: Dimensions,
@@ -56,6 +58,7 @@ impl<'a> Default for Builder<'a> {
             gate_line_width: Command::GateLineWidth(0x04),
             write_vcom: Command::WriteVCOM(0x3C),
             write_lut: None,
+            write_color: None,
             data_entry_mode: Command::DataEntryMode(
                 DataEntryMode::IncrementYIncrementX,
                 IncrementAxis::Horizontal,
@@ -116,6 +119,17 @@ impl<'a> Builder<'a> {
         }
     }
 
+    /// Set color driving voltage
+    pub fn yellow(self, yellow: &'a bool) -> Self {
+        if ! yellow {
+           return self
+        }
+        Self {
+            write_color: Some(Command::SourceDrivingVoltageYellow(0x07)),
+            ..self
+        }
+    }
+
     /// Define data entry sequence.
     ///
     /// Defaults to DataEntryMode::IncrementAxis, IncrementAxis::Horizontal. Corresponds to command
@@ -172,6 +186,7 @@ impl<'a> Builder<'a> {
             gate_line_width: self.gate_line_width,
             write_vcom: self.write_vcom,
             write_lut: self.write_lut,
+            write_color: self.write_color,
             data_entry_mode: self.data_entry_mode,
             dimensions: self.dimensions.ok_or_else(|| BuilderError {})?,
             rotation: self.rotation,

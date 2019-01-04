@@ -101,6 +101,10 @@ where
         // POR is HiZ. Need pull from config
         // Command::BorderWaveform(u8).execute(&mut self.interface)?;
 
+        if let Some(ref write_color) = self.config.write_color {
+            write_color.execute(&mut self.interface)?;
+        }
+
         if let Some(ref write_lut) = self.config.write_lut {
             write_lut.execute(&mut self.interface)?;
         }
@@ -114,14 +118,14 @@ where
         Ok(())
     }
 
-    /// Update the display by writing the supplied B/W and Red buffers to the controller.
+    /// Update the display by writing the supplied B/W and Red/Yellow buffers to the controller.
     ///
     /// This method will write the two buffers to the controller then initiate the update
     /// display command. Currently it will busy wait until the update has completed.
     pub fn update<D: hal::blocking::delay::DelayMs<u8>>(
         &mut self,
         black: &[u8],
-        red: &[u8],
+        color: &[u8],
         delay: &mut D,
     ) -> Result<(), I::Error> {
         // Write the B/W RAM
@@ -130,10 +134,10 @@ where
         Command::YAddress(0).execute(&mut self.interface)?;
         BufCommand::WriteBlackData(&black[..buf_limit]).execute(&mut self.interface)?;
 
-        // Write the Red RAM
+        // Write the Red/Yellow RAM
         Command::XAddress(0).execute(&mut self.interface)?;
         Command::YAddress(0).execute(&mut self.interface)?;
-        BufCommand::WriteRedData(&red[..buf_limit]).execute(&mut self.interface)?;
+        BufCommand::WriteRedOrYellowData(&color[..buf_limit]).execute(&mut self.interface)?;
 
         // Kick off the display update
         Command::UpdateDisplayOption2(0xC7).execute(&mut self.interface)?;

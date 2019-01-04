@@ -3,7 +3,7 @@
 pub enum Color {
     Black,
     White,
-    Red,
+    RedOrYellow,
 }
 
 #[cfg(feature = "graphics")]
@@ -18,7 +18,7 @@ impl From<u8> for Color {
         match value {
             0 => Color::Black,
             1 => Color::White,
-            2 => Color::Red,
+            2 => Color::RedOrYellow,
             _ => panic!("invalid color value"),
         }
     }
