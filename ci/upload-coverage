@@ -1,0 +1,25 @@
+#!/bin/bash
+
+KCOV_VERSION="36"
+CRATE=ssd1675
+
+set -e
+
+curl -OL "https://github.com/SimonKagstrom/kcov/archive/v$KCOV_VERSION.tar.gz"
+tar zxf "v$KCOV_VERSION.tar.gz"
+cd "kcov-$KCOV_VERSION"
+mkdir build
+cd build
+cmake ..
+make
+make install DESTDIR=../../kcov-build
+cd ../..
+rm -rf "kcov-$KCOV_VERSION"
+
+for file in target/debug/"$CRATE"-*[^\.d]; do
+  mkdir -p "target/cov/$(basename "$file")";
+  ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename "$file")" "$file";
+done
+
+bash <(curl -s https://codecov.io/bash)
+echo "Uploaded code coverage"
