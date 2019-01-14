@@ -15,6 +15,7 @@ license = "MIT OR Apache-2.0"
 
 [badges]
 travis-ci = { repository = "wezm/ssd1675" }
+codecov = { repository = "wezm/ssd1675" }
 
 [dependencies]
 libm = "0.1.2"
