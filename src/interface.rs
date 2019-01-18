@@ -1,7 +1,7 @@
 use hal;
 
 // Section 15.2 of the HINK-E0213A07 data sheet says to hold for 10ms
-const RESET_DELAY_MS: u8 = 10;
+const RESET_DELAY_MS: u16 = 10;
 
 /// Trait implemented by displays to provide implemenation of core functionality.
 pub trait DisplayInterface {
@@ -17,10 +17,13 @@ pub trait DisplayInterface {
     fn send_data(&mut self, data: &[u8]) -> Result<(), Self::Error>;
 
     /// Reset the controller.
-    fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D);
+    fn reset<D: hal::blocking::delay::DelayMs<u16>>(&mut self, delay: &mut D);
 
     /// Wait for the controller to indicate it is not busy.
     fn busy_wait(&self);
+
+    /// Wait for the controller to indicate it is not busy with a delay between checks.
+    fn busy_wait_with_delay<D: hal::blocking::delay::DelayMs<u16>>(&self, delay: &mut D, duration: u16);
 }
 
 /// The hardware interface to a display.
@@ -143,7 +146,7 @@ where
 {
     type Error = SPI::Error;
 
-    fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D) {
+    fn reset<D: hal::blocking::delay::DelayMs<u16>>(&mut self, delay: &mut D) {
         self.reset.set_low();
         delay.delay_ms(RESET_DELAY_MS);
         self.reset.set_high();
@@ -165,5 +168,11 @@ where
 
     fn busy_wait(&self) {
         while self.busy.is_high() {}
+    }
+
+    fn busy_wait_with_delay<D: hal::blocking::delay::DelayMs<u16>>(&self, delay: &mut D, duration: u16) {
+        while self.busy.is_high() {
+            delay.delay_ms(duration);
+        }
     }
 }

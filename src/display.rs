@@ -71,7 +71,7 @@ where
     /// Perform a hardware reset followed by software reset.
     ///
     /// This will wake a controller that has previously entered deep sleep.
-    pub fn reset<D: hal::blocking::delay::DelayMs<u8>>(
+    pub fn reset<D: hal::blocking::delay::DelayMs<u16>>(
         &mut self,
         delay: &mut D,
     ) -> Result<(), I::Error> {
@@ -118,7 +118,7 @@ where
     ///
     /// This method will write the two buffers to the controller then initiate the update
     /// display command. Currently it will busy wait until the update has completed.
-    pub fn update<D: hal::blocking::delay::DelayMs<u8>>(
+    pub fn update<D: hal::blocking::delay::DelayMs<u16>>(
         &mut self,
         black: &[u8],
         red: &[u8],
@@ -143,7 +143,7 @@ where
         // and only busy wait if it wants to talk to the display again. Could possibly treat
         // the interface like a smart pointer in which deref would wait until it's not
         // busy.
-        self.interface.busy_wait();
+        self.interface.busy_wait_with_delay(delay, 1000);
 
         Ok(())
     }

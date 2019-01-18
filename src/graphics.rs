@@ -39,7 +39,7 @@ where
     }
 
     /// Update the display by writing the buffers to the controller.
-    pub fn update<D: hal::blocking::delay::DelayMs<u8>>(
+    pub fn update<D: hal::blocking::delay::DelayMs<u16>>(
         &mut self,
         delay: &mut D,
     ) -> Result<(), I::Error> {
@@ -196,7 +196,7 @@ mod tests {
     impl DisplayInterface for MockInterface {
         type Error = MockError;
 
-        fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, _delay: &mut D) {}
+        fn reset<D: hal::blocking::delay::DelayMs<u16>>(&mut self, _delay: &mut D) {}
 
         fn send_command(&mut self, _command: u8) -> Result<(), Self::Error> {
             Ok(())
@@ -207,6 +207,13 @@ mod tests {
         }
 
         fn busy_wait(&self) {}
+
+        fn busy_wait_with_delay<D: hal::blocking::delay::DelayMs<u16>>(
+            &self,
+            _delay: &mut D,
+            _duration: u16,
+        ) {
+        }
     }
 
     fn build_mock_display<'a>() -> Display<'a, MockInterface> {
