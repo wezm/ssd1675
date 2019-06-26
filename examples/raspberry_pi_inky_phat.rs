@@ -29,12 +29,13 @@ use std::{fs, io};
 const ROWS: u16 = 212;
 const COLS: u8 = 104;
 
+// More documentation for LUTs can be found at https://github.com/pimoroni/inky/blob/master/library/inky/inky.py#L95
 #[rustfmt::skip]
 const LUT: [u8; 70] = [
     // Phase 0     Phase 1     Phase 2     Phase 3     Phase 4     Phase 5     Phase 6
     // A B C D     A B C D     A B C D     A B C D     A B C D     A B C D     A B C D
     0b01001000, 0b10100000, 0b00010000, 0b00010000, 0b00010011, 0b00000000, 0b00000000,  // LUT0 - Black
-    0b01001000, 0b10100000, 0b10000000, 0b00000000, 0b00000011, 0b00000000, 0b00000000,  // LUTT1 - White
+    0b01001000, 0b10100000, 0b10000000, 0b00000000, 0b00000011, 0b00000000, 0b00000000,  // LUT1 - White
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,  // IGNORE
     0b01001000, 0b10100101, 0b00000000, 0b10111011, 0b00000000, 0b00000000, 0b00000000,  // LUT3 - Red
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,  // LUT4 - VCOM
