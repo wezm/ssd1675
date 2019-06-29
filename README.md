@@ -20,7 +20,7 @@ safe Rust. It supports the 4-wire SPI interface.
 
 The library has been tested and confirmed working on these devices:
 
-* Red/Black/White [Inky pHAT] version 2 on Raspberry Pi Zero (pictured above)
+* Red/Black/White [Inky pHAT] version 2 on Raspberry Pi Zero (pictured above) and Zero W
 
 ## Examples
 
