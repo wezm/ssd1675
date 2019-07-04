@@ -24,7 +24,7 @@ pub const RBW: [u8; 70] = [
     0,    0,    0,    0,     0    // 6
 ];
 
-/// LUT for black and white displays. As far as I know, you can also use this on tricolour displays for faster refresh.
+/// LUT for black and white displays. As far as I know, you can also use this on tricolour displays for faster refresh, I have encountered some ghosting though.
 #[rustfmt::skip]
 pub const BW: [u8; 70] = [
     // Phase 0     Phase 1     Phase 2     Phase 3     Phase 4     Phase 5     Phase 6
