@@ -153,7 +153,7 @@ where
 {
     fn draw<T>(&mut self, item_pixels: T)
     where
-        T: Iterator<Item = Pixel<Color>>,
+        T: IntoIterator<Item = Pixel<Color>>,
     {
         for Pixel(UnsignedCoord(x, y), colour) in item_pixels {
             if outside_display(

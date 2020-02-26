@@ -96,10 +96,10 @@ pub struct Interface<SPI, CS, BUSY, DC, RESET> {
 impl<SPI, CS, BUSY, DC, RESET> Interface<SPI, CS, BUSY, DC, RESET>
 where
     SPI: hal::blocking::spi::Write<u8>,
-    CS: hal::digital::OutputPin,
-    BUSY: hal::digital::InputPin,
-    DC: hal::digital::OutputPin,
-    RESET: hal::digital::OutputPin,
+    CS: hal::digital::v2::OutputPin,
+    BUSY: hal::digital::v2::InputPin,
+    DC: hal::digital::v2::OutputPin,
+    RESET: hal::digital::v2::OutputPin,
 {
     /// Create a new Interface from embedded hal traits.
     pub fn new(spi: SPI, cs: CS, busy: BUSY, dc: DC, reset: RESET) -> Self {
@@ -136,10 +136,10 @@ where
 impl<SPI, CS, BUSY, DC, RESET> DisplayInterface for Interface<SPI, CS, BUSY, DC, RESET>
 where
     SPI: hal::blocking::spi::Write<u8>,
-    CS: hal::digital::OutputPin,
-    BUSY: hal::digital::InputPin,
-    DC: hal::digital::OutputPin,
-    RESET: hal::digital::OutputPin,
+    CS: hal::digital::v2::OutputPin,
+    BUSY: hal::digital::v2::InputPin,
+    DC: hal::digital::v2::OutputPin,
+    RESET: hal::digital::v2::OutputPin,
 {
     type Error = SPI::Error;
 
@@ -164,6 +164,9 @@ where
     }
 
     fn busy_wait(&self) {
-        while self.busy.is_high() {}
+        while match self.busy.is_high() {
+            Ok(x) => x,
+            _ => false,
+        } {}
     }
 }
