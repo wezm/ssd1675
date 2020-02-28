@@ -1,3 +1,4 @@
+use crate::Error;
 use hal;
 
 // Section 15.2 of the HINK-E0213A07 data sheet says to hold for 10ms
@@ -143,23 +144,23 @@ where
 {
     type Error = SPI::Error;
 
-    fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D) {
-        self.reset.set_low();
+    fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D){
+        self.reset.set_low().map_err::<Error<RESET>, _>(Error::Gpio).unwrap();
         delay.delay_ms(RESET_DELAY_MS);
-        self.reset.set_high();
+        self.reset.set_high().map_err::<Error<RESET>, _>(Error::Gpio).unwrap();
         delay.delay_ms(RESET_DELAY_MS);
     }
 
     fn send_command(&mut self, command: u8) -> Result<(), Self::Error> {
-        self.dc.set_low();
+        self.dc.set_low().map_err::<Error<DC>, _>(Error::Gpio).unwrap();
         self.write(&[command])?;
-        self.dc.set_high();
+        self.dc.set_high().map_err::<Error<DC>, _>(Error::Gpio).unwrap();
 
         Ok(())
     }
 
     fn send_data(&mut self, data: &[u8]) -> Result<(), Self::Error> {
-        self.dc.set_high();
+        self.dc.set_high().map_err::<Error<DC>, _>(Error::Gpio).unwrap();
         self.write(data)
     }
 
