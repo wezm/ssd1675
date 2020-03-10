@@ -18,23 +18,23 @@ travis-ci = { repository = "wezm/ssd1675" }
 codecov = { repository = "wezm/ssd1675" }
 
 [dependencies]
-libm = "0.1.2"
+libm = "0.2.1"
 
 [dependencies.embedded-hal]
 features = ["unproven"]
-version = "0.2.2"
+version = "0.2.3"
 
 [dependencies.embedded-graphics]
 optional = true
-version = "0.4.4"
+version = "0.5.2"
 
 [dependencies.linux-embedded-hal]
 optional = true
-version = "0.2.1"
+version = "0.3.0"
 
 [dependencies.profont]
 optional = true
-version = "0.1"
+version = "0.3.0"
 
 [features]
 default = ["graphics"]

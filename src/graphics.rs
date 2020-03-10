@@ -153,7 +153,7 @@ where
 {
     fn draw<T>(&mut self, item_pixels: T)
     where
-        T: Iterator<Item = Pixel<Color>>,
+        T: IntoIterator<Item = Pixel<Color>>,
     {
         for Pixel(UnsignedCoord(x, y), colour) in item_pixels {
             if outside_display(
@@ -175,7 +175,7 @@ where
 mod tests {
     use self::embedded_graphics::coord::Coord;
     use self::embedded_graphics::prelude::*;
-    use self::embedded_graphics::primitives::Rect;
+    use self::embedded_graphics::primitives::Rectangle;
     use self::embedded_graphics::Drawing;
     use super::*;
     use {Builder, Color, Dimensions, Display, DisplayInterface, GraphicDisplay, Rotation};
@@ -279,8 +279,8 @@ mod tests {
                 GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut red_buffer);
 
             display.draw(
-                Rect::new(Coord::new(0, 0), Coord::new(2, 2))
-                    .with_stroke(Some(Color::White))
+                Rectangle::new(Coord::new(0, 0), Coord::new(2, 2))
+                    .stroke(Some(Color::White))
                     .into_iter(),
             );
         }
@@ -306,8 +306,8 @@ mod tests {
                 GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut red_buffer);
 
             display.draw(
-                Rect::new(Coord::new(0, 0), Coord::new(2, 2))
-                    .with_stroke(Some(Color::Red))
+                Rectangle::new(Coord::new(0, 0), Coord::new(2, 2))
+                    .stroke(Some(Color::Red))
                     .into_iter(),
             );
         }
