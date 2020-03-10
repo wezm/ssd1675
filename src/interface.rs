@@ -1,4 +1,4 @@
-use crate::Error;
+use core::fmt::Debug;
 use hal;
 
 // Section 15.2 of the HINK-E0213A07 data sheet says to hold for 10ms
@@ -138,29 +138,32 @@ impl<SPI, CS, BUSY, DC, RESET> DisplayInterface for Interface<SPI, CS, BUSY, DC,
 where
     SPI: hal::blocking::spi::Write<u8>,
     CS: hal::digital::v2::OutputPin,
+    CS::Error: Debug,
     BUSY: hal::digital::v2::InputPin,
     DC: hal::digital::v2::OutputPin,
+    DC::Error: Debug,
     RESET: hal::digital::v2::OutputPin,
+    RESET::Error: Debug,
 {
     type Error = SPI::Error;
 
-    fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D){
-        self.reset.set_low().map_err::<Error<RESET>, _>(Error::Gpio).unwrap();
+    fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D) {
+        self.reset.set_low().unwrap();
         delay.delay_ms(RESET_DELAY_MS);
-        self.reset.set_high().map_err::<Error<RESET>, _>(Error::Gpio).unwrap();
+        self.reset.set_high().unwrap();
         delay.delay_ms(RESET_DELAY_MS);
     }
 
     fn send_command(&mut self, command: u8) -> Result<(), Self::Error> {
-        self.dc.set_low().map_err::<Error<DC>, _>(Error::Gpio).unwrap();
+        self.dc.set_low().unwrap();
         self.write(&[command])?;
-        self.dc.set_high().map_err::<Error<DC>, _>(Error::Gpio).unwrap();
+        self.dc.set_high().unwrap();
 
         Ok(())
     }
 
     fn send_data(&mut self, data: &[u8]) -> Result<(), Self::Error> {
-        self.dc.set_high().map_err::<Error<DC>, _>(Error::Gpio).unwrap();
+        self.dc.set_high().unwrap();
         self.write(data)
     }
 
