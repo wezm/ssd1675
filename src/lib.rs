@@ -47,14 +47,12 @@ mod color;
 pub mod command;
 pub mod config;
 pub mod display;
-pub mod error;
 pub mod graphics;
 pub mod interface;
 
 pub use color::Color;
 pub use config::Builder;
 pub use display::{Dimensions, Display, Rotation};
-pub use error::Error;
 pub use graphics::GraphicDisplay;
 pub use interface::DisplayInterface;
 pub use interface::Interface;
