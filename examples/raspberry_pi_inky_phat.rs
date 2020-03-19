@@ -1,5 +1,5 @@
 extern crate linux_embedded_hal;
-use linux_embedded_hal::spidev::{self, SpidevOptions};
+use linux_embedded_hal::spidev::{SpiModeFlags, SpidevOptions};
 use linux_embedded_hal::sysfs_gpio::Direction;
 use linux_embedded_hal::Delay;
 use linux_embedded_hal::{Pin, Spidev};
@@ -56,7 +56,7 @@ fn main() -> Result<(), std::io::Error> {
     let options = SpidevOptions::new()
         .bits_per_word(8)
         .max_speed_hz(4_000_000)
-        .mode(spidev::SPI_MODE_0)
+        .mode(SpiModeFlags::SPI_MODE_0)
         .build();
     spi.configure(&options).expect("SPI configuration");
 
@@ -119,8 +119,8 @@ fn main() -> Result<(), std::io::Error> {
 
         display.draw(
             ProFont24Point::render_str("Raspberry Pi")
-                .with_stroke(Some(Color::Red))
-                .with_fill(Some(Color::White))
+                .stroke(Some(Color::Red))
+                .fill(Some(Color::White))
                 .translate(Coord::new(1, -4))
                 .into_iter(),
         );
@@ -128,15 +128,15 @@ fn main() -> Result<(), std::io::Error> {
         if let Ok(cpu_temp) = read_cpu_temp() {
             display.draw(
                 ProFont14Point::render_str("CPU Temp:")
-                    .with_stroke(Some(Color::Black))
-                    .with_fill(Some(Color::White))
+                    .stroke(Some(Color::Black))
+                    .fill(Some(Color::White))
                     .translate(Coord::new(1, 30))
                     .into_iter(),
             );
             display.draw(
                 ProFont12Point::render_str(&format!("{:.1}°C", cpu_temp))
-                    .with_stroke(Some(Color::Black))
-                    .with_fill(Some(Color::White))
+                    .stroke(Some(Color::Black))
+                    .fill(Some(Color::White))
                     .translate(Coord::new(95, 34))
                     .into_iter(),
             );
@@ -145,8 +145,8 @@ fn main() -> Result<(), std::io::Error> {
         if let Some(uptime) = read_uptime() {
             display.draw(
                 ProFont9Point::render_str(uptime.trim())
-                    .with_stroke(Some(Color::Black))
-                    .with_fill(Some(Color::White))
+                    .stroke(Some(Color::Black))
+                    .fill(Some(Color::White))
                     .translate(Coord::new(1, 93))
                     .into_iter(),
             );
@@ -155,8 +155,8 @@ fn main() -> Result<(), std::io::Error> {
         if let Some(uname) = read_uname() {
             display.draw(
                 ProFont9Point::render_str(uname.trim())
-                    .with_stroke(Some(Color::Black))
-                    .with_fill(Some(Color::White))
+                    .stroke(Some(Color::Black))
+                    .fill(Some(Color::White))
                     .translate(Coord::new(1, 84))
                     .into_iter(),
             );
