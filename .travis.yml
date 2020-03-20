@@ -1,7 +1,10 @@
 language: rust
 cache: cargo
 script:
-  - cargo test
+  - |
+      cargo test &&
+      cargo build --features=examples --examples
+
 rust:
   - stable
   - beta
