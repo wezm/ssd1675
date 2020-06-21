@@ -173,10 +173,6 @@ pub enum BufCommand<'buf> {
     WriteLUT(&'buf [u8]),
 }
 
-fn u16_as_u8(val: u16) -> [u8; 2] {
-    [(val & 0xFF00 >> 8) as u8, (val & 0xFF) as u8]
-}
-
 /// Populates data buffer (array) and returns a pair (tuple) with command and
 /// appropriately sized slice into populated buffer.
 /// E.g.
@@ -219,7 +215,7 @@ impl Command {
         let mut buf = [0u8; 4];
         let (command, data) = match *self {
             DriverOutputControl(gate_lines, scanning_seq_and_dir) => {
-                let [upper, lower] = u16_as_u8(gate_lines);
+                let [upper, lower] = gate_lines.to_be_bytes();
                 pack!(buf, 0x01, [lower, upper, scanning_seq_and_dir])
             }
             GateDrivingVoltage(voltages) => pack!(buf, 0x03, [voltages]),
@@ -229,7 +225,7 @@ impl Command {
             }
             GateScanStartPostion(position) => {
                 debug_assert!(Contains::contains(&(0..MAX_GATES), position));
-                let [upper, lower] = u16_as_u8(position);
+                let [upper, lower] = position.to_be_bytes();
                 pack!(buf, 0x0F, [lower, upper])
             }
             DeepSleepMode(mode) => {
@@ -281,8 +277,8 @@ impl Command {
             BorderWaveform(border_waveform) => pack!(buf, 0x3C, [border_waveform]),
             StartEndXPosition(start, end) => pack!(buf, 0x44, [start, end]),
             StartEndYPosition(start, end) => {
-                let [start_upper, start_lower] = u16_as_u8(start);
-                let [end_upper, end_lower] = u16_as_u8(end);
+                let [start_upper, start_lower] = start.to_be_bytes();
+                let [end_upper, end_lower] = end.to_be_bytes();
                 pack!(buf, 0x45, [start_lower, start_upper, end_lower, end_upper])
             }
             // AutoWriteRedPattern(u8) => {
@@ -340,5 +336,80 @@ where
 {
     fn contains(&self, item: C) -> bool {
         item >= *self.start() && item <= *self.end()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct MockInterface {
+        data: [u8; 256],
+        offset: usize,
+    }
+
+    impl MockInterface {
+        fn new() -> Self {
+            MockInterface {
+                data: [0; 256],
+                offset: 0,
+            }
+        }
+
+        fn write(&mut self, byte: u8) {
+            self.data[self.offset] = byte;
+            self.offset += 1;
+        }
+
+        fn data(&self) -> &[u8] {
+            &self.data[0..self.offset]
+        }
+    }
+
+    impl DisplayInterface for MockInterface {
+        type Error = ();
+
+        /// Send a command to the controller.
+        ///
+        /// Prefer calling `execute` on a [Commmand](../command/enum.Command.html) over calling this
+        /// directly.
+        fn send_command(&mut self, command: u8) -> Result<(), Self::Error> {
+            self.write(command);
+            Ok(())
+        }
+
+        /// Send data for a command.
+        fn send_data(&mut self, data: &[u8]) -> Result<(), Self::Error> {
+            for byte in data {
+                self.write(*byte)
+            }
+            Ok(())
+        }
+
+        /// Reset the controller.
+        fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, _delay: &mut D) {
+            self.data = [0; 256];
+            self.offset = 0;
+        }
+
+        /// Wait for the controller to indicate it is not busy.
+        fn busy_wait(&self) {
+            // nop
+        }
+    }
+
+    #[test]
+    fn test_command_execute() {
+        let mut interface = MockInterface::new();
+        let upper = 0x12;
+        let lower = 0x34;
+        let scanning_seq_and_dir = 1;
+        let command = Command::DriverOutputControl(0x1234, scanning_seq_and_dir);
+
+        command.execute(&mut interface).unwrap();
+        assert_eq!(
+            interface.data(),
+            &[0x01, lower, upper, scanning_seq_and_dir]
+        );
     }
 }
