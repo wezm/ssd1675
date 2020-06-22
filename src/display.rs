@@ -91,21 +91,21 @@ where
         Command::DriverOutputControl(self.config.dimensions.rows, 0x00)
             .execute(&mut self.interface)?;
 
+        Command::GateDrivingVoltage(0x17).execute(&mut self.interface)?;
+        Command::SourceDrivingVoltage(0x41, 0xAC, 0x32).execute(&mut self.interface)?;
         self.config.dummy_line_period.execute(&mut self.interface)?;
         self.config.gate_line_width.execute(&mut self.interface)?;
+        self.config.data_entry_mode.execute(&mut self.interface)?;
 
-        // Command::GateDrivingVoltage(0b10000 | 0b0001);
-        // Command::SourceDrivingVoltage(0x2D, 0xB2, 0x22).execute(&mut self.interface)?;
         self.config.write_vcom.execute(&mut self.interface)?;
 
         // POR is HiZ. Need pull from config
-        // Command::BorderWaveform(u8).execute(&mut self.interface)?;
+        Command::BorderWaveform(0b00110001).execute(&mut self.interface)?;
 
         if let Some(ref write_lut) = self.config.write_lut {
             write_lut.execute(&mut self.interface)?;
         }
 
-        self.config.data_entry_mode.execute(&mut self.interface)?;
 
         let end = (self.config.dimensions.cols / 8 - 1) as u8;
         Command::StartEndXPosition(0, end).execute(&mut self.interface)?;
