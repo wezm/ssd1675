@@ -27,7 +27,7 @@ use std::{fs, io};
 // see https://github.com/rust-embedded/rust-sysfs-gpio/issues/5 and follow-up issues
 
 const ROWS: u16 = 212;
-const COLS: u8 = 104;
+const COLS: u16 = 104;
 
 #[rustfmt::skip]
 const LUT: [u8; 70] = [

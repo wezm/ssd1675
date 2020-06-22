@@ -8,9 +8,9 @@ use interface::DisplayInterface;
 
 // Max display resolution is 160x296
 /// The maximum number of rows supported by the controller
-pub const MAX_GATE_OUTPUTS: u16 = 296;
+pub const MAX_GATE_OUTPUTS: u16 = 300;
 /// The maximum number of columns supported by the controller
-pub const MAX_SOURCE_OUTPUTS: u8 = 160;
+pub const MAX_SOURCE_OUTPUTS: u16 = 400;
 
 // Magic numbers from the data sheet
 const ANALOG_BLOCK_CONTROL_MAGIC: u8 = 0x54;
@@ -25,7 +25,7 @@ pub struct Dimensions {
     /// The number of columns the display has.
     ///
     /// Must be less than or equal to MAX_SOURCE_OUTPUTS.
-    pub cols: u8,
+    pub cols: u16,
 }
 
 /// Represents the physical rotation of the display relative to the native orientation.
@@ -107,7 +107,7 @@ where
 
         self.config.data_entry_mode.execute(&mut self.interface)?;
 
-        let end = self.config.dimensions.cols / 8 - 1;
+        let end = (self.config.dimensions.cols / 8 - 1) as u8;
         Command::StartEndXPosition(0, end).execute(&mut self.interface)?;
         Command::StartEndYPosition(0, self.config.dimensions.rows).execute(&mut self.interface)?;
 
@@ -125,7 +125,7 @@ where
         delay: &mut D,
     ) -> Result<(), I::Error> {
         // Write the B/W RAM
-        let buf_limit = libm::ceilf((self.rows() * self.cols() as u16) as f32 / 8.) as usize;
+        let buf_limit = libm::ceilf((self.rows() as usize * self.cols() as usize) as f32 / 8.) as usize;
         Command::XAddress(0).execute(&mut self.interface)?;
         Command::YAddress(0).execute(&mut self.interface)?;
         BufCommand::WriteBlackData(&black[..buf_limit]).execute(&mut self.interface)?;
@@ -162,7 +162,7 @@ where
     }
 
     /// Returns the number of columns the display has.
-    pub fn cols(&self) -> u8 {
+    pub fn cols(&self) -> u16 {
         self.config.dimensions.cols
     }
 

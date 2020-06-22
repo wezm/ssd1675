@@ -181,7 +181,7 @@ mod tests {
     use {Builder, Color, Dimensions, Display, DisplayInterface, GraphicDisplay, Rotation};
 
     const ROWS: u16 = 3;
-    const COLS: u8 = 8;
+    const COLS: u16 = 8;
     const BUFFER_SIZE: usize = (ROWS * COLS as u16) as usize / 8;
 
     struct MockInterface {}
