@@ -8,10 +8,9 @@ extern crate ssd1675;
 use ssd1675::{Builder, Color, Dimensions, Display, GraphicDisplay, Rotation};
 
 // Graphics
+#[macro_use]
 extern crate embedded_graphics;
-use embedded_graphics::coord::Coord;
 use embedded_graphics::prelude::*;
-use embedded_graphics::Drawing;
 
 // Font
 extern crate profont;
@@ -117,49 +116,69 @@ fn main() -> Result<(), std::io::Error> {
         display.clear(Color::White);
         println!("Clear");
 
-        display.draw(
-            ProFont24Point::render_str("Raspberry Pi")
-                .stroke(Some(Color::Red))
-                .fill(Some(Color::White))
-                .translate(Coord::new(1, -4))
-                .into_iter(),
-        );
+        egtext!(
+            text = "Raspberry Pi",
+            top_left = (1, -4),
+            style = text_style!(
+                font = ProFont24Point,
+                background_color = Color::White,
+                text_color = Color::Red,
+            )
+        )
+        .draw(&mut display)
+        .expect("error drawing text");
 
         if let Ok(cpu_temp) = read_cpu_temp() {
-            display.draw(
-                ProFont14Point::render_str("CPU Temp:")
-                    .stroke(Some(Color::Black))
-                    .fill(Some(Color::White))
-                    .translate(Coord::new(1, 30))
-                    .into_iter(),
-            );
-            display.draw(
-                ProFont12Point::render_str(&format!("{:.1}°C", cpu_temp))
-                    .stroke(Some(Color::Black))
-                    .fill(Some(Color::White))
-                    .translate(Coord::new(95, 34))
-                    .into_iter(),
-            );
+            egtext!(
+                text = "CPU Temp:",
+                top_left = (1, 30),
+                style = text_style!(
+                    font = ProFont14Point,
+                    background_color = Color::White,
+                    text_color = Color::Black,
+                )
+            )
+            .draw(&mut display)
+            .expect("error drawing text");
+            egtext!(
+                text = &format!("{:.1}°C", cpu_temp),
+                top_left = (95, 34),
+                style = text_style!(
+                    font = ProFont12Point,
+                    background_color = Color::White,
+                    text_color = Color::Black,
+                )
+            )
+            .draw(&mut display)
+            .expect("error drawing text");
         }
 
         if let Some(uptime) = read_uptime() {
-            display.draw(
-                ProFont9Point::render_str(uptime.trim())
-                    .stroke(Some(Color::Black))
-                    .fill(Some(Color::White))
-                    .translate(Coord::new(1, 93))
-                    .into_iter(),
-            );
+            egtext!(
+                text = uptime.trim(),
+                top_left = (1, 93),
+                style = text_style!(
+                    font = ProFont9Point,
+                    background_color = Color::White,
+                    text_color = Color::Black,
+                )
+            )
+            .draw(&mut display)
+            .expect("error drawing text");
         }
 
         if let Some(uname) = read_uname() {
-            display.draw(
-                ProFont9Point::render_str(uname.trim())
-                    .stroke(Some(Color::Black))
-                    .fill(Some(Color::White))
-                    .translate(Coord::new(1, 84))
-                    .into_iter(),
-            );
+            egtext!(
+                text = uname.trim(),
+                top_left = (1, 84),
+                style = text_style!(
+                    font = ProFont9Point,
+                    background_color = Color::White,
+                    text_color = Color::Black,
+                )
+            )
+            .draw(&mut display)
+            .expect("error drawing text");
         }
 
         display.update(&mut delay).expect("error updating display");

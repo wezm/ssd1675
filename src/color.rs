@@ -9,9 +9,13 @@ pub enum Color {
 #[cfg(feature = "graphics")]
 extern crate embedded_graphics;
 #[cfg(feature = "graphics")]
+use self::embedded_graphics::pixelcolor::raw::RawU8;
+#[cfg(feature = "graphics")]
 use self::embedded_graphics::prelude::*;
 #[cfg(feature = "graphics")]
-impl PixelColor for Color {}
+impl PixelColor for Color {
+    type Raw = RawU8;
+}
 
 impl From<u8> for Color {
     fn from(value: u8) -> Self {
