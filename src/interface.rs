@@ -1,3 +1,4 @@
+use core::fmt::Debug;
 use hal;
 
 // Section 15.2 of the HINK-E0213A07 data sheet says to hold for 10ms
@@ -96,10 +97,10 @@ pub struct Interface<SPI, CS, BUSY, DC, RESET> {
 impl<SPI, CS, BUSY, DC, RESET> Interface<SPI, CS, BUSY, DC, RESET>
 where
     SPI: hal::blocking::spi::Write<u8>,
-    CS: hal::digital::OutputPin,
-    BUSY: hal::digital::InputPin,
-    DC: hal::digital::OutputPin,
-    RESET: hal::digital::OutputPin,
+    CS: hal::digital::v2::OutputPin,
+    BUSY: hal::digital::v2::InputPin,
+    DC: hal::digital::v2::OutputPin,
+    RESET: hal::digital::v2::OutputPin,
 {
     /// Create a new Interface from embedded hal traits.
     pub fn new(spi: SPI, cs: CS, busy: BUSY, dc: DC, reset: RESET) -> Self {
@@ -136,34 +137,40 @@ where
 impl<SPI, CS, BUSY, DC, RESET> DisplayInterface for Interface<SPI, CS, BUSY, DC, RESET>
 where
     SPI: hal::blocking::spi::Write<u8>,
-    CS: hal::digital::OutputPin,
-    BUSY: hal::digital::InputPin,
-    DC: hal::digital::OutputPin,
-    RESET: hal::digital::OutputPin,
+    CS: hal::digital::v2::OutputPin,
+    CS::Error: Debug,
+    BUSY: hal::digital::v2::InputPin,
+    DC: hal::digital::v2::OutputPin,
+    DC::Error: Debug,
+    RESET: hal::digital::v2::OutputPin,
+    RESET::Error: Debug,
 {
     type Error = SPI::Error;
 
     fn reset<D: hal::blocking::delay::DelayMs<u8>>(&mut self, delay: &mut D) {
-        self.reset.set_low();
+        self.reset.set_low().unwrap();
         delay.delay_ms(RESET_DELAY_MS);
-        self.reset.set_high();
+        self.reset.set_high().unwrap();
         delay.delay_ms(RESET_DELAY_MS);
     }
 
     fn send_command(&mut self, command: u8) -> Result<(), Self::Error> {
-        self.dc.set_low();
+        self.dc.set_low().unwrap();
         self.write(&[command])?;
-        self.dc.set_high();
+        self.dc.set_high().unwrap();
 
         Ok(())
     }
 
     fn send_data(&mut self, data: &[u8]) -> Result<(), Self::Error> {
-        self.dc.set_high();
+        self.dc.set_high().unwrap();
         self.write(data)
     }
 
     fn busy_wait(&self) {
-        while self.busy.is_high() {}
+        while match self.busy.is_high() {
+            Ok(x) => x,
+            _ => false,
+        } {}
     }
 }

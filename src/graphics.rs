@@ -124,59 +124,46 @@ fn rotation(x: u32, y: u32, width: u32, height: u32, rotation: Rotation) -> (u32
     }
 }
 
-fn outside_display(x: u32, y: u32, width: u32, height: u32, rotation: Rotation) -> bool {
-    match rotation {
-        Rotation::Rotate0 | Rotation::Rotate180 => {
-            if x >= width || y >= height {
-                return true;
-            }
-        }
-        Rotation::Rotate90 | Rotation::Rotate270 => {
-            if y >= width || x >= height {
-                return true;
-            }
-        }
-    }
-
-    false
-}
-
 #[cfg(feature = "graphics")]
 extern crate embedded_graphics;
 #[cfg(feature = "graphics")]
-use self::embedded_graphics::{drawable::Pixel, prelude::UnsignedCoord, Drawing};
+use self::embedded_graphics::prelude::*;
 
 #[cfg(feature = "graphics")]
-impl<'a, I> Drawing<Color> for GraphicDisplay<'a, I>
+impl<'a, I> DrawTarget<Color> for GraphicDisplay<'a, I>
 where
     I: DisplayInterface,
 {
-    fn draw<T>(&mut self, item_pixels: T)
-    where
-        T: Iterator<Item = Pixel<Color>>,
-    {
-        for Pixel(UnsignedCoord(x, y), colour) in item_pixels {
-            if outside_display(
-                x,
-                y,
-                self.cols() as u32,
-                self.rows() as u32,
-                self.rotation(),
-            ) {
-                continue;
-            }
+    type Error = core::convert::Infallible;
 
-            self.set_pixel(x, y, colour);
+    fn draw_pixel(
+        &mut self,
+        Pixel(Point { x, y }, color): Pixel<Color>,
+    ) -> Result<(), Self::Error> {
+        let sz = self.size();
+        let x = x as u32;
+        let y = y as u32;
+        if x < sz.width && y < sz.height {
+            self.set_pixel(x, y, color)
+        }
+        Ok(())
+    }
+
+    fn size(&self) -> Size {
+        match self.rotation() {
+            Rotation::Rotate0 | Rotation::Rotate180 => {
+                Size::new(self.cols().into(), self.rows().into())
+            }
+            Rotation::Rotate90 | Rotation::Rotate270 => {
+                Size::new(self.rows().into(), self.cols().into())
+            }
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use self::embedded_graphics::coord::Coord;
-    use self::embedded_graphics::prelude::*;
-    use self::embedded_graphics::primitives::Rect;
-    use self::embedded_graphics::Drawing;
+    use self::embedded_graphics::{egrectangle, primitive_style};
     use super::*;
     use {Builder, Color, Dimensions, Display, DisplayInterface, GraphicDisplay, Rotation};
 
@@ -278,11 +265,13 @@ mod tests {
             let mut display =
                 GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut red_buffer);
 
-            display.draw(
-                Rect::new(Coord::new(0, 0), Coord::new(2, 2))
-                    .with_stroke(Some(Color::White))
-                    .into_iter(),
-            );
+            egrectangle!(
+                top_left = (0, 0),
+                bottom_right = (2, 2),
+                style = primitive_style!(stroke_color = Color::White, stroke_width = 1)
+            )
+            .draw(&mut display)
+            .unwrap()
         }
 
         #[rustfmt::skip]
@@ -305,11 +294,13 @@ mod tests {
             let mut display =
                 GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut red_buffer);
 
-            display.draw(
-                Rect::new(Coord::new(0, 0), Coord::new(2, 2))
-                    .with_stroke(Some(Color::Red))
-                    .into_iter(),
-            );
+            egrectangle!(
+                top_left = (0, 0),
+                bottom_right = (2, 2),
+                style = primitive_style!(stroke_color = Color::Red, stroke_width = 1)
+            )
+            .draw(&mut display)
+            .unwrap();
         }
 
         #[rustfmt::skip]
