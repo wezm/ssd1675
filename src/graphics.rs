@@ -130,25 +130,34 @@ extern crate embedded_graphics;
 use self::embedded_graphics::prelude::*;
 
 #[cfg(feature = "graphics")]
-impl<'a, I> DrawTarget<Color> for GraphicDisplay<'a, I>
+impl<'a, I> DrawTarget for GraphicDisplay<'a, I>
 where
     I: DisplayInterface,
 {
+    type Color = Color;
     type Error = core::convert::Infallible;
 
-    fn draw_pixel(
-        &mut self,
-        Pixel(Point { x, y }, color): Pixel<Color>,
-    ) -> Result<(), Self::Error> {
+    fn draw_iter<Iter>(&mut self, pixels: Iter) -> Result<(), Self::Error>
+    where
+        Iter: IntoIterator<Item = Pixel<Self::Color>>,
+    {
         let sz = self.size();
-        let x = x as u32;
-        let y = y as u32;
-        if x < sz.width && y < sz.height {
-            self.set_pixel(x, y, color)
+        for Pixel(Point { x, y }, color) in pixels {
+            let x = x as u32;
+            let y = y as u32;
+            if x < sz.width && y < sz.height {
+                self.set_pixel(x, y, color)
+            }
         }
         Ok(())
     }
+}
 
+#[cfg(feature = "graphics")]
+impl<'a, I> OriginDimensions for GraphicDisplay<'a, I>
+where
+    I: DisplayInterface,
+{
     fn size(&self) -> Size {
         match self.rotation() {
             Rotation::Rotate0 | Rotation::Rotate180 => {
@@ -163,7 +172,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use self::embedded_graphics::{egrectangle, primitive_style};
+    use self::embedded_graphics::primitives::{PrimitiveStyleBuilder, Rectangle};
     use super::*;
     use {Builder, Color, Dimensions, Display, DisplayInterface, GraphicDisplay, Rotation};
 
@@ -265,13 +274,15 @@ mod tests {
             let mut display =
                 GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut red_buffer);
 
-            egrectangle!(
-                top_left = (0, 0),
-                bottom_right = (2, 2),
-                style = primitive_style!(stroke_color = Color::White, stroke_width = 1)
-            )
-            .draw(&mut display)
-            .unwrap()
+            Rectangle::with_corners(Point::new(0, 0), Point::new(2, 2))
+                .into_styled(
+                    PrimitiveStyleBuilder::new()
+                        .stroke_color(Color::White)
+                        .stroke_width(1)
+                        .build(),
+                )
+                .draw(&mut display)
+                .unwrap()
         }
 
         #[rustfmt::skip]
@@ -294,13 +305,15 @@ mod tests {
             let mut display =
                 GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut red_buffer);
 
-            egrectangle!(
-                top_left = (0, 0),
-                bottom_right = (2, 2),
-                style = primitive_style!(stroke_color = Color::Red, stroke_width = 1)
-            )
-            .draw(&mut display)
-            .unwrap();
+            Rectangle::with_corners(Point::new(0, 0), Point::new(2, 2))
+                .into_styled(
+                    PrimitiveStyleBuilder::new()
+                        .stroke_color(Color::Red)
+                        .stroke_width(1)
+                        .build(),
+                )
+                .draw(&mut display)
+                .unwrap();
         }
 
         #[rustfmt::skip]
