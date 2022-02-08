@@ -16,9 +16,10 @@ make install DESTDIR=../../kcov-build
 cd ../..
 rm -rf "kcov-$KCOV_VERSION"
 
-for file in target/debug/"$CRATE"-*[^\.d]; do
-  mkdir -p "target/cov/$(basename "$file")";
-  ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename "$file")" "$file";
+for file in target/debug/deps/"$CRATE"-*; do
+  [ -x "${file}" ] || continue
+  mkdir -p "target/cov/$(basename "$file")"
+  ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename "$file")" "$file"
 done
 
 bash <(curl -s https://codecov.io/bash)
