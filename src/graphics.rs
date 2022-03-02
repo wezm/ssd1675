@@ -1,5 +1,8 @@
 use color::Color;
-use core::ops::{Deref, DerefMut};
+use core::{
+    convert::AsMut,
+    ops::{Deref, DerefMut},
+};
 use display::{Display, Rotation};
 use hal;
 use interface::DisplayInterface;
@@ -9,28 +12,25 @@ use interface::DisplayInterface;
 /// When the `graphics` feature is enabled `GraphicDisplay` implements the `Draw` trait from
 /// [embedded-graphics](https://crates.io/crates/embedded-graphics). This allows basic shapes and
 /// text to be drawn on the display.
-pub struct GraphicDisplay<'a, I>
+pub struct GraphicDisplay<'a, I, B = &'a mut [u8]>
 where
     I: DisplayInterface,
 {
     display: Display<'a, I>,
-    black_buffer: &'a mut [u8],
-    red_buffer: &'a mut [u8],
+    black_buffer: B,
+    red_buffer: B,
 }
 
-impl<'a, I> GraphicDisplay<'a, I>
+impl<'a, I, B> GraphicDisplay<'a, I, B>
 where
     I: DisplayInterface,
+    B: AsMut<[u8]>,
 {
     /// Promote a `Display` to a `GraphicDisplay`.
     ///
     /// B/W and Red buffers for drawing into must be supplied. These should be `rows` * `cols` in
     /// length.
-    pub fn new(
-        display: Display<'a, I>,
-        black_buffer: &'a mut [u8],
-        red_buffer: &'a mut [u8],
-    ) -> Self {
+    pub fn new(display: Display<'a, I>, black_buffer: B, red_buffer: B) -> Self {
         GraphicDisplay {
             display,
             black_buffer,
@@ -44,7 +44,7 @@ where
         delay: &mut D,
     ) -> Result<(), I::Error> {
         self.display
-            .update(self.black_buffer, self.red_buffer, delay)
+            .update(self.black_buffer.as_mut(), self.red_buffer.as_mut(), delay)
     }
 
     /// Clear the buffers, filling them a single color.
@@ -55,12 +55,12 @@ where
             Color::Red => (0xFF, 0xFF),
         };
 
-        for byte in &mut self.black_buffer.iter_mut() {
+        for byte in &mut self.black_buffer.as_mut().iter_mut() {
             *byte = black; // background_color.get_byte_value();
         }
 
         // TODO: Combine loops
-        for byte in &mut self.red_buffer.iter_mut() {
+        for byte in &mut self.red_buffer.as_mut().iter_mut() {
             *byte = red; // background_color.get_byte_value();
         }
     }
@@ -77,22 +77,22 @@ where
 
         match color {
             Color::Black => {
-                self.black_buffer[index] &= !bit;
-                self.red_buffer[index] &= !bit;
+                self.black_buffer.as_mut()[index] &= !bit;
+                self.red_buffer.as_mut()[index] &= !bit;
             }
             Color::White => {
-                self.black_buffer[index] |= bit;
-                self.red_buffer[index] &= !bit;
+                self.black_buffer.as_mut()[index] |= bit;
+                self.red_buffer.as_mut()[index] &= !bit;
             }
             Color::Red => {
-                self.black_buffer[index] |= bit;
-                self.red_buffer[index] |= bit;
+                self.black_buffer.as_mut()[index] |= bit;
+                self.red_buffer.as_mut()[index] |= bit;
             }
         }
     }
 }
 
-impl<'a, I> Deref for GraphicDisplay<'a, I>
+impl<'a, I, B> Deref for GraphicDisplay<'a, I, B>
 where
     I: DisplayInterface,
 {
@@ -103,7 +103,7 @@ where
     }
 }
 
-impl<'a, I> DerefMut for GraphicDisplay<'a, I>
+impl<'a, I, B> DerefMut for GraphicDisplay<'a, I, B>
 where
     I: DisplayInterface,
 {
@@ -130,9 +130,10 @@ extern crate embedded_graphics;
 use self::embedded_graphics::prelude::*;
 
 #[cfg(feature = "graphics")]
-impl<'a, I> DrawTarget for GraphicDisplay<'a, I>
+impl<'a, I, B> DrawTarget for GraphicDisplay<'a, I, B>
 where
     I: DisplayInterface,
+    B: AsMut<[u8]>,
 {
     type Color = Color;
     type Error = core::convert::Infallible;
@@ -154,7 +155,7 @@ where
 }
 
 #[cfg(feature = "graphics")]
-impl<'a, I> OriginDimensions for GraphicDisplay<'a, I>
+impl<'a, I, B> OriginDimensions for GraphicDisplay<'a, I, B>
 where
     I: DisplayInterface,
 {
