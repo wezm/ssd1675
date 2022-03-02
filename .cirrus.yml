@@ -7,6 +7,7 @@ test_task:
       - rustc --version
       - cat Cargo.toml
   install_script:
+    # these dependencies are for building the kcov tool
     - apt-get update && apt-get install -y --no-install-recommends binutils-dev cmake libcurl4-openssl-dev zlib1g-dev libdw-dev libiberty-dev python
   test_script:
     - cargo test
