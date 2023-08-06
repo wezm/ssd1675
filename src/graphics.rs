@@ -1,5 +1,8 @@
 use color::Color;
-use core::ops::{Deref, DerefMut};
+use core::{
+    convert::AsMut,
+    ops::{Deref, DerefMut},
+};
 use display::{Display, Rotation};
 use hal;
 use interface::DisplayInterface;
@@ -9,28 +12,25 @@ use interface::DisplayInterface;
 /// When the `graphics` feature is enabled `GraphicDisplay` implements the `Draw` trait from
 /// [embedded-graphics](https://crates.io/crates/embedded-graphics). This allows basic shapes and
 /// text to be drawn on the display.
-pub struct GraphicDisplay<'a, I>
+pub struct GraphicDisplay<'a, I, B = &'a mut [u8]>
 where
     I: DisplayInterface,
 {
     display: Display<'a, I>,
-    black_buffer: &'a mut [u8],
-    red_buffer: &'a mut [u8],
+    black_buffer: B,
+    red_buffer: B,
 }
 
-impl<'a, I> GraphicDisplay<'a, I>
+impl<'a, I, B> GraphicDisplay<'a, I, B>
 where
     I: DisplayInterface,
+    B: AsMut<[u8]>,
 {
     /// Promote a `Display` to a `GraphicDisplay`.
     ///
     /// B/W and Red buffers for drawing into must be supplied. These should be `rows` * `cols` in
     /// length.
-    pub fn new(
-        display: Display<'a, I>,
-        black_buffer: &'a mut [u8],
-        red_buffer: &'a mut [u8],
-    ) -> Self {
+    pub fn new(display: Display<'a, I>, black_buffer: B, red_buffer: B) -> Self {
         GraphicDisplay {
             display,
             black_buffer,
@@ -44,7 +44,7 @@ where
         delay: &mut D,
     ) -> Result<(), I::Error> {
         self.display
-            .update(self.black_buffer, self.red_buffer, delay)
+            .update(self.black_buffer.as_mut(), self.red_buffer.as_mut(), delay)
     }
 
     /// Clear the buffers, filling them a single color.
@@ -55,12 +55,12 @@ where
             Color::Red => (0xFF, 0xFF),
         };
 
-        for byte in &mut self.black_buffer.iter_mut() {
+        for byte in &mut self.black_buffer.as_mut().iter_mut() {
             *byte = black; // background_color.get_byte_value();
         }
 
         // TODO: Combine loops
-        for byte in &mut self.red_buffer.iter_mut() {
+        for byte in &mut self.red_buffer.as_mut().iter_mut() {
             *byte = red; // background_color.get_byte_value();
         }
     }
@@ -77,22 +77,22 @@ where
 
         match color {
             Color::Black => {
-                self.black_buffer[index] &= !bit;
-                self.red_buffer[index] &= !bit;
+                self.black_buffer.as_mut()[index] &= !bit;
+                self.red_buffer.as_mut()[index] &= !bit;
             }
             Color::White => {
-                self.black_buffer[index] |= bit;
-                self.red_buffer[index] &= !bit;
+                self.black_buffer.as_mut()[index] |= bit;
+                self.red_buffer.as_mut()[index] &= !bit;
             }
             Color::Red => {
-                self.black_buffer[index] |= bit;
-                self.red_buffer[index] |= bit;
+                self.black_buffer.as_mut()[index] |= bit;
+                self.red_buffer.as_mut()[index] |= bit;
             }
         }
     }
 }
 
-impl<'a, I> Deref for GraphicDisplay<'a, I>
+impl<'a, I, B> Deref for GraphicDisplay<'a, I, B>
 where
     I: DisplayInterface,
 {
@@ -103,7 +103,7 @@ where
     }
 }
 
-impl<'a, I> DerefMut for GraphicDisplay<'a, I>
+impl<'a, I, B> DerefMut for GraphicDisplay<'a, I, B>
 where
     I: DisplayInterface,
 {
@@ -130,25 +130,35 @@ extern crate embedded_graphics;
 use self::embedded_graphics::prelude::*;
 
 #[cfg(feature = "graphics")]
-impl<'a, I> DrawTarget<Color> for GraphicDisplay<'a, I>
+impl<'a, I, B> DrawTarget for GraphicDisplay<'a, I, B>
 where
     I: DisplayInterface,
+    B: AsMut<[u8]>,
 {
+    type Color = Color;
     type Error = core::convert::Infallible;
 
-    fn draw_pixel(
-        &mut self,
-        Pixel(Point { x, y }, color): Pixel<Color>,
-    ) -> Result<(), Self::Error> {
+    fn draw_iter<Iter>(&mut self, pixels: Iter) -> Result<(), Self::Error>
+    where
+        Iter: IntoIterator<Item = Pixel<Self::Color>>,
+    {
         let sz = self.size();
-        let x = x as u32;
-        let y = y as u32;
-        if x < sz.width && y < sz.height {
-            self.set_pixel(x, y, color)
+        for Pixel(Point { x, y }, color) in pixels {
+            let x = x as u32;
+            let y = y as u32;
+            if x < sz.width && y < sz.height {
+                self.set_pixel(x, y, color)
+            }
         }
         Ok(())
     }
+}
 
+#[cfg(feature = "graphics")]
+impl<'a, I, B> OriginDimensions for GraphicDisplay<'a, I, B>
+where
+    I: DisplayInterface,
+{
     fn size(&self) -> Size {
         match self.rotation() {
             Rotation::Rotate0 | Rotation::Rotate180 => {
@@ -163,7 +173,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use self::embedded_graphics::{egrectangle, primitive_style};
+    use self::embedded_graphics::primitives::{PrimitiveStyleBuilder, Rectangle};
     use super::*;
     use {Builder, Color, Dimensions, Display, DisplayInterface, GraphicDisplay, Rotation};
 
@@ -265,13 +275,15 @@ mod tests {
             let mut display =
                 GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut red_buffer);
 
-            egrectangle!(
-                top_left = (0, 0),
-                bottom_right = (2, 2),
-                style = primitive_style!(stroke_color = Color::White, stroke_width = 1)
-            )
-            .draw(&mut display)
-            .unwrap()
+            Rectangle::with_corners(Point::new(0, 0), Point::new(2, 2))
+                .into_styled(
+                    PrimitiveStyleBuilder::new()
+                        .stroke_color(Color::White)
+                        .stroke_width(1)
+                        .build(),
+                )
+                .draw(&mut display)
+                .unwrap()
         }
 
         #[rustfmt::skip]
@@ -294,13 +306,15 @@ mod tests {
             let mut display =
                 GraphicDisplay::new(build_mock_display(), &mut black_buffer, &mut red_buffer);
 
-            egrectangle!(
-                top_left = (0, 0),
-                bottom_right = (2, 2),
-                style = primitive_style!(stroke_color = Color::Red, stroke_width = 1)
-            )
-            .draw(&mut display)
-            .unwrap();
+            Rectangle::with_corners(Point::new(0, 0), Point::new(2, 2))
+                .into_styled(
+                    PrimitiveStyleBuilder::new()
+                        .stroke_color(Color::Red)
+                        .stroke_width(1)
+                        .build(),
+                )
+                .draw(&mut display)
+                .unwrap();
         }
 
         #[rustfmt::skip]

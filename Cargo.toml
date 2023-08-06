@@ -1,6 +1,6 @@
 [package]
 name = "ssd1675"
-version = "0.3.0"
+version = "0.5.0"
 authors = ["Wesley Moore <wes@wezm.net>"]
 description = "Driver for the SSD1675 e-Paper display (EPD) controller, for use with embedded-hal"
 
@@ -13,28 +13,24 @@ categories = ["embedded", "no-std"]
 
 license = "MIT OR Apache-2.0"
 
-[badges]
-travis-ci = { repository = "wezm/ssd1675" }
-codecov = { repository = "wezm/ssd1675" }
-
 [dependencies]
-libm = "0.2.1"
+libm = "0.2.2"
 
 [dependencies.embedded-hal]
 features = ["unproven"]
-version = "0.2.3"
+version = "0.2.6"
 
 [dependencies.embedded-graphics]
 optional = true
-version = "0.6.2"
+version = "0.7.1"
 
 [dependencies.linux-embedded-hal]
 optional = true
-version = "0.3.0"
+version = "0.3.2"
 
 [dependencies.profont]
 optional = true
-version = "0.4.0"
+version = "0.5.0"
 
 [features]
 default = ["graphics"]
